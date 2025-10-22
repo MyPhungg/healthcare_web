@@ -27,6 +27,7 @@ Dự án **HEALTHCARE_WEB** là ứng dụng quản lý chăm sóc sức khỏe 
 
 ## Cấu trúc dự án
 
+```bash
 HEALTHCARE_WEB/
 │
 ├─ backend/
@@ -49,6 +50,7 @@ HEALTHCARE_WEB/
 │ └─ vite.config.js
 │
 └─ docker-compose.yml
+```
 
 - **backend/**: Chứa các microservice Java.
 - **db/**: Chứa các file SQL khởi tạo cơ sở dữ liệu.

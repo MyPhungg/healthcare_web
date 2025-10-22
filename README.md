@@ -1,6 +1,6 @@
 # HEALTHCARE_WEB
 
-Dự án **HEALTHCARE_WEB** là ứng dụng quản lý chăm sóc sức khỏe với kiến trúc **microservices**, bao gồm backend (Java/Spring Boot), frontend (Vite + React) và cơ sở dữ liệu MySQL.
+Dự án **HEALTHCARE_WEB** là ứng dụng liên kết giữa các bác sĩ và bệnh nhân, hỗ trợ đặt lịch online tiện lợi, dễ dàng với kiến trúc **microservices**, bao gồm backend (Java/Spring Boot), frontend (Vite + React) và cơ sở dữ liệu MySQL.
 
 ---
 

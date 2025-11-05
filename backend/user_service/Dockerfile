@@ -1,5 +1,12 @@
-FROM openjdk:21-jdk-slim
+# Stage 1: Build
+FROM maven:3.9.6-eclipse-temurin-21 AS builder
+WORKDIR /build
+COPY . .
+RUN mvn clean package -DskipTests
+
+# Stage 2: Run
+FROM eclipse-temurin:21-jdk-jammy
 WORKDIR /app
-COPY target/user_service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /build/target/user_service-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "app.jar"]

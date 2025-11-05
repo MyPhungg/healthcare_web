@@ -8,9 +8,15 @@
 		<version>3.5.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>common</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+<!--    <groupId>com.healthcare</groupId>-->
+<!--    <artifactId>common</artifactId>-->
+<!--    <version>1.0.0</version>-->
+<!--    <packaging>jar</packaging>-->
+
+    <groupId>com.healthcare</groupId>
+    <artifactId>common</artifactId>
+    <packaging>jar</packaging>
+	<version>1.0.0</version>
 	<name>common</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
@@ -30,7 +36,10 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
-		<dependency>
+
+
+
+        <dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>

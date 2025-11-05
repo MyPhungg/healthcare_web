@@ -50,22 +50,36 @@ CREATE TABLE doctor (
 CREATE TABLE schedule (
     schedule_id VARCHAR(50) PRIMARY KEY,
     doctor_id VARCHAR(50) NOT NULL,
-    date DATE NOT NULL,
+    working_days SET('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN') NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     consultation_fee DECIMAL(10, 2),
     slot_duration INT NOT NULL -- tính bằng phút
 );
-CREATE TABLE appointments (
+
+CREATE TABLE appointment (
     appointment_id VARCHAR(50) PRIMARY KEY,
-    doctor_id VARCHAR(50) NOT NULL,
-    patient_id VARCHAR(50) NOT NULL,
     schedule_id VARCHAR(50) NOT NULL,
-    FOREIGN KEY (schedule_id) REFERENCES schedule(schedule_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    patient_id VARCHAR(50) NOT NULL,
+    FOREIGN KEY (schedule_id) REFERENCES schedule(schedule_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
     status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED') DEFAULT 'PENDING',
+    appointment_date DATE NOT NULL,
+    appointment_start TIME NOT NULL,
+    appointment_end TIME NOT NULL,
     interacted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     interacted_by VARCHAR(50) NOT NULL,
     reason TEXT
+);
+
+CREATE TABLE day_off (
+    day_off_id VARCHAR(50) PRIMARY KEY,
+    doctor_id VARCHAR(50) NOT NULL,
+    date_off DATE NOT NULL,
+    reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50) NOT NULL,
+    UNIQUE (doctor_id, date_off)
 );
 -- INSERT DATA
 INSERT INTO user (user_id, email, phone, password, role)
@@ -281,110 +295,34 @@ VALUES (
         'Chuyên khoa sản phụ với nhiều năm làm việc tại nước ngoài.'
     );
 INSERT INTO schedule (
-        schedule_id,
-        doctor_id,
-        date,
-        start_time,
-        end_time,
-        consultation_fee,
-        slot_duration
-    )
-VALUES (
-        'sch30000001',
-        'doc20000001',
-        '2025-11-01',
-        '08:00:00',
-        '12:00:00',
-        300000.00,
-        30
-    ),
-    (
-        'sch30000002',
-        'doc20000002',
-        '2025-11-01',
-        '14:00:00',
-        '18:00:00',
-        450000.00,
-        20
-    ),
-    (
-        'sch30000003',
-        'doc20000001',
-        '2025-11-02',
-        '08:00:00',
-        '11:00:00',
-        300000.00,
-        30
-    ),
-    (
-        'sch30000004',
-        'doc20000003',
-        '2025-11-02',
-        '16:00:00',
-        '20:00:00',
-        500000.00,
-        45
-    ),
-    (
-        'sch30000005',
-        'doc20000002',
-        '2025-11-03',
-        '09:00:00',
-        '13:00:00',
-        450000.00,
-        20
-    );
-INSERT INTO appointments (
-        appointment_id,
-        doctor_id,
-        patient_id,
-        schedule_id,
-        status,
-        interacted_by,
-        reason
-    )
-VALUES (
-        'app40000001',
-        'doc20000001',
-        'pat10000001',
-        'sch30000001',
-        'CONFIRMED',
-        'user89012345',
-        'Bé bị sốt và ho liên tục 3 ngày.'
-    ),
-    (
-        'app40000002',
-        'doc20000002',
-        'pat10000002',
-        'sch30000002',
-        'PENDING',
-        'user23456789',
-        'Khám sức khỏe định kỳ.'
-    ),
-    (
-        'app40000003',
-        'doc20000001',
-        'pat10000003',
-        'sch30000003',
-        'COMPLETED',
-        'user89012345',
-        'Tái khám sau khi dùng thuốc.'
-    ),
-    (
-        'app40000004',
-        'doc20000002',
-        'pat10000001',
-        'sch30000005',
-        'CANCELLED',
-        'user23456789',
-        'Bệnh nhân bận đột xuất.'
-    ),
-    (
-        'app40000005',
-        'doc20000003',
-        'pat10000003',
-        'sch30000004',
-        'CONFIRMED',
-        'user89012345',
-        'Khám răng và lấy cao răng.'
-    );
+    schedule_id,
+    doctor_id,
+    working_days,
+    start_time,
+    end_time,
+    consultation_fee,
+    slot_duration
+) VALUES
+    ('sch30000001', 'doc20000001', 'MON,WED,FRI', '08:00:00', '12:00:00', 300000.00, 30),
+    ('sch30000002', 'doc20000002', 'TUE,THU', '14:00:00', '18:00:00', 450000.00, 20),
+    ('sch30000003', 'doc20000001', 'SUN', '08:00:00', '11:00:00', 300000.00, 30),
+    ('sch30000004', 'doc20000003', 'SAT', '16:00:00', '20:00:00', 500000.00, 45),
+    ('sch30000005', 'doc20000002', 'MON', '09:00:00', '13:00:00', 450000.00, 20);
+
+-- ✅ Dữ liệu mẫu cho appointment
+INSERT INTO appointment (
+    appointment_id,
+    schedule_id,
+    patient_id,
+    status,
+    appointment_date,
+    appointment_start,
+    appointment_end,
+    interacted_by,
+    reason
+) VALUES
+    ('app40000001', 'sch30000001', 'pat10000001', 'CONFIRMED', '2025-11-03', '08:00:00', '08:30:00', 'user89012345', 'Bé bị sốt và ho liên tục 3 ngày.'),
+    ('app40000002', 'sch30000002', 'pat10000002', 'PENDING', '2025-11-04', '14:00:00', '14:20:00', 'user23456789', 'Khám sức khỏe định kỳ.'),
+    ('app40000003', 'sch30000003', 'pat10000003', 'COMPLETED', '2025-11-02', '09:00:00', '09:30:00', 'user89012345', 'Tái khám sau khi dùng thuốc.'),
+    ('app40000004', 'sch30000005', 'pat10000001', 'CANCELLED', '2025-11-03', '10:00:00', '10:20:00', 'user23456789', 'Bệnh nhân bận đột xuất.'),
+    ('app40000005', 'sch30000004', 'pat10000003', 'CONFIRMED', '2025-11-01', '16:00:00', '16:45:00', 'user89012345', 'Khám răng và lấy cao răng.');

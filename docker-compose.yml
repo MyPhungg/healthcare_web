@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+  # DB cho user_service
+  user_db:
+    image: mysql:8.0
+    container_name: user_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: user_service_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./db/user_service_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - healthcare_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  user_service:
+    build: ./backend/user_service
+    container_name: user_service
+    ports:
+      - "8082:8082"
+    environment:
+        - SPRING_DATASOURCE_URL=jdbc:mysql://user_db:3306/user_service_db
+        - SPRING_DATASOURCE_USERNAME=root
+        - SPRING_DATASOURCE_PASSWORD=root
+        - JWT_SECRET=${JWT_SECRET}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+        - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
+        - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+#      SPRING_DATASOURCE_URL: jdbc:mysql://user_db:3306/user_service_db
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: root
+#      JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+#      GOOGLE_CLIENT_ID=your-google-client-id
+#      GOOGLE_CLIENT_SECRET=your-google-client-secret
+#      FACEBOOK_CLIENT_ID=your-facebook-client-id
+#      FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
+
+    depends_on:
+      user_db:
+        condition: service_healthy
+    networks:
+      - healthcare_net
+
+  # DB cho appointment_service
+  appointment_db:
+    image: mysql:8.0
+    container_name: appointment_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: appointment_service_db
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./db/appointment_service_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - healthcare_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  appointment_service:
+    build: ./backend/appointment_service
+    container_name: appointment_service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://appointment_db:3306/appointment_service_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      appointment_db:
+        condition: service_healthy
+    networks:
+      - healthcare_net
+
+  # gateway_service
+  gateway_service:
+    build: ./backend/gateway_service
+    container_name: gateway_service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - appointment_service
+      - user_service
+    networks:
+      - healthcare_net
+
+  # frontend
+  frontend:
+    build: ./frontend/healthcare-app
+    container_name: healthcare_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway_service
+    networks:
+      - healthcare_net
+
+networks:
+  healthcare_net:
+    driver: bridge

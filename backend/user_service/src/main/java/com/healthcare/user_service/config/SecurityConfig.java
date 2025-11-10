@@ -53,7 +53,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
-    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+//    private final OAuth2SuccessHandler oAuth2SuccessHandler;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -64,13 +64,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/oauth2/**").permitAll()
+//                        .requestMatchers("/oauth2/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(user -> user.userService(customOAuth2UserService))
-                        .successHandler(oAuth2SuccessHandler)
-                );
+//                .oauth2Login(oauth2 -> oauth2
+//                        .userInfoEndpoint(user -> user.userService(customOAuth2UserService))
+//                        .successHandler(oAuth2SuccessHandler)
+//                );
         return http.build();
     }
 

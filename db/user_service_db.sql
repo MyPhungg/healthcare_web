@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS user_service_db CHARACTER SET utf8mb4 COLLATE utf8
 USE user_service_db;
 CREATE TABLE user (
     user_id VARCHAR(50) PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
     phone VARCHAR(20) UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -46,42 +47,13 @@ CREATE TABLE doctor (
     FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (speciality_id) REFERENCES speciality(speciality_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
-INSERT INTO user (user_id, email, phone, password, role)
-VALUES (
-        'user48291035',
-        'alice.p@email.com',
-        '0901111111',
-        '123456',
-        'PATIENT'
-    ),
-    (
-        'user73918204',
-        'bob.d@email.com',
-        '0902222222',
-        '123456',
-        'DOCTOR'
-    ),
-    (
-        'user28491763',
-        'charlie.a@email.com',
-        '0903333333',
-        '123456',
-        'ADMIN'
-    ),
-    (
-        'user59102847',
-        'david.p@email.com',
-        '0904444444',
-        '123456',
-        'PATIENT'
-    ),
-    (
-        'user83047591',
-        'emma.d@email.com',
-        '0905555555',
-        '123456',
-        'DOCTOR'
-    );
+INSERT INTO user (user_id, username, email, phone, password, role)
+VALUES
+    ('user48291035', 'alice.p', 'alice.p@email.com', '0901111111', '123456', 'PATIENT'),
+    ('user73918204', 'bob.d', 'bob.d@email.com', '0902222222', '123456', 'DOCTOR'),
+    ('user28491763', 'charlie.a', 'charlie.a@email.com', '0903333333', '123456', 'ADMIN'),
+    ('user59102847', 'david.p', 'david.p@email.com', '0904444444', '123456', 'PATIENT'),
+    ('user83047591', 'emma.d', 'emma.d@email.com', '0905555555', '123456', 'DOCTOR');
 INSERT INTO speciality (speciality_id, name, description)
 VALUES (
         'spec00000001',

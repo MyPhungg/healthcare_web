@@ -20,6 +20,8 @@ import DoctorManagement from '../pages/dashboardPages/doctorManagerment';
 import ReportPage from '../pages/dashboardPages/report';
 import DoctorAppointment from '../pages/dashboardPages/doctorAppointments';
 import DoctorPatient from '../pages/dashboardPages/doctorPatients';
+import AddDoctorSchedule from '../pages/dashboardPages/addDoctorSchedule';
+import AboutUs from '../pages/webPages/aboutus';
 
 function AppRoutes() {
   return (
@@ -28,7 +30,7 @@ function AppRoutes() {
       <Routes>
         <Route element={<WebLayout />}>
           <Route path="/home" element={<Home />} />
-          <Route path="/about" element={<div>About Page</div>} />
+          <Route path="/about" element={<AboutUs/>} />
           <Route path="/doctors" element={<div>Doctors Page</div>} />
           <Route path="/specialties" element={<div>Specialties Page</div>} />
           <Route path="/contact" element={<div>Contact Page</div>} />
@@ -54,6 +56,7 @@ function AppRoutes() {
           <Route path="schedule" element={<DoctorSchedule />} />
           <Route path="appointments" element={<DoctorAppointment/>} />
           <Route path="patients" element={<DoctorPatient/>} />
+          <Route path="add-schedule" element={<AddDoctorSchedule/>} />
         </Route>
 
         

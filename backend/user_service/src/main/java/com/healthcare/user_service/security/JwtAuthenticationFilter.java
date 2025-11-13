@@ -34,6 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         logger.info("JWT Filter: Authorization header = {}", header);
 
+        //Cho phép prelight Options request đi qua
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod()))
+        {
+            logger.info("JWT Filter : bypass OPTIONS prelight");
+            filterChain.doFilter(request, response);
+            return;
+        }
         // Bỏ qua các endpoint login/public
         if (path.startsWith("/api/auth/")) {
             logger.info("JWT Filter: bypass /api/auth/**");
@@ -53,6 +60,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                //Tiếp tục filter chain
+                filterChain.doFilter(request, response);
             } else {
                 logger.warn("JWT Filter: token invalid");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

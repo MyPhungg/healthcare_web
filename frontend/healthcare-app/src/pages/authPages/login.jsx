@@ -1,86 +1,229 @@
 import React, {useState} from "react";
-import { Outlet } from "react-router-dom";
 import InputComp from "../../components/common/inputComp";
 import Button from "../../components/common/button";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Lock } from 'lucide-react';
+import { User, Lock, Mail, Phone } from 'lucide-react';
 import { FaFacebook, FaGoogle } from 'react-icons/fa';
 import '../../index.css';
+
 const Login = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        email: "",
+        emailOrPhone: "",
         password: ""
     });
+    
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+
     const handleChange = (e) => {
+        const { name, value } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: value
         });
+        
+        // Clear error khi user bắt đầu nhập
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }));
+        }
+        if (errors.submit) {
+            setErrors(prev => ({
+                ...prev,
+                submit: ''
+            }));
+        }
     }
-    const handleSubmit = (e) => {
+
+    // Validation form
+    const validateForm = () => {
+        const newErrors = {};
+
+        if (!formData.emailOrPhone.trim()) {
+            newErrors.emailOrPhone = 'Email hoặc số điện thoại là bắt buộc';
+        }
+
+        if (!formData.password) {
+            newErrors.password = 'Mật khẩu là bắt buộc';
+        }
+
+        return newErrors;
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault(); 
-        console.log("Form Data Submitted: ", formData);
-        Navigate("/dashboard");
+        
+        const validationErrors = validateForm();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Gọi API đăng nhập
+            const response = await fetch('http://localhost:8082/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    emailOrPhone: formData.emailOrPhone,
+                    password: formData.password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                console.log('Đăng nhập thành công:', data);
+                
+                // Lưu token vào localStorage hoặc context
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // Chuyển hướng đến dashboard
+                navigate("/home");
+            } else {
+                console.error('Lỗi đăng nhập:', data);
+                setErrors({ submit: data.message || 'Đăng nhập thất bại' });
+            }
+        } catch (error) {
+            console.error('Lỗi kết nối:', error);
+            setErrors({ submit: 'Lỗi kết nối đến server' });
+        } finally {
+            setIsLoading(false);
+        }
     }
+
+    const handleSocialLogin = async (provider) => {
+        try {
+            // Redirect đến OAuth2 provider hoặc mở popup
+            if (provider === 'google') {
+                // Google OAuth2 implementation
+                window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_GOOGLE_CLIENT_ID&redirect_uri=http://localhost:3000/auth/callback&response_type=token&scope=email profile`;
+            } else if (provider === 'facebook') {
+                // Facebook OAuth2 implementation
+                window.location.href = `https://www.facebook.com/v12.0/dialog/oauth?client_id=YOUR_FACEBOOK_APP_ID&redirect_uri=http://localhost:3000/auth/callback&scope=email`;
+            }
+        } catch (error) {
+            console.error('Lỗi đăng nhập mạng xã hội:', error);
+            setErrors({ submit: `Lỗi đăng nhập với ${provider}` });
+        }
+    }
+
+    const handleForgotPassword = () => {
+        // Điều hướng đến trang quên mật khẩu
+        navigate("/forgot-password");
+    }
+
     return (
-      <div className="w-full ">
-      <h2 className="text-4xl font-bold mb-8 text-center text-blue-600">Đăng nhập</h2>
+        <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+            <h2 className="text-3xl font-bold mb-6 text-center text-blue-600">Đăng nhập</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <label className="text-gray-700 font-medium" icon={User}>Tên tài khoản</label>
-        <InputComp
-          type="text"
-          name="username"
-          placeholder="Tên tài khoản"
-          value={formData.username}
-          onChange={handleChange}
-          className="mb-4"
-        />
-        <label className="text-gray-700 font-medium" icon={Lock}>Mật khẩu</label>
-        <InputComp
-          type="password"
-          name="password"
-          placeholder="Mật khẩu"
-          value={formData.password}
-          onChange={handleChange}
-          className="mb-4"
-        />
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Email hoặc số điện thoại */}
+                <InputComp
+                    label="Email hoặc số điện thoại"
+                    type="text"
+                    name="emailOrPhone"
+                    placeholder="Nhập email hoặc số điện thoại"
+                    value={formData.emailOrPhone}
+                    onChange={handleChange}
+                    error={errors.emailOrPhone}
+                    icon={Mail}
+                />
 
-        <div className="text-center">
-          <span className="text-gray-600">Chưa có tài khoản? </span>
-          <Link to="/register" className="text-blue-600 font-semibold hover:underline">
-            Đăng ký ngay.
-          </Link>
+                {/* Mật khẩu */}
+                <InputComp
+                    label="Mật khẩu"
+                    type="password"
+                    name="password"
+                    placeholder="Nhập mật khẩu"
+                    value={formData.password}
+                    onChange={handleChange}
+                    error={errors.password}
+                    icon={Lock}
+                />
+
+                {/* Quên mật khẩu */}
+                <div className="text-right">
+                    <button 
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-blue-600 text-sm font-medium hover:underline"
+                    >
+                        Quên mật khẩu?
+                    </button>
+                </div>
+
+                {/* Lỗi submit */}
+                {errors.submit && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+                        {errors.submit}
+                    </div>
+                )}
+
+                {/* Đăng ký tài khoản mới */}
+                <div className="text-center pt-2">
+                    <span className="text-gray-600">Chưa có tài khoản? </span>
+                    <Link to="/register" className="text-blue-600 font-semibold hover:underline">
+                        Đăng ký ngay.
+                    </Link>
+                </div>
+
+                {/* Nút đăng nhập */}
+                <Button 
+                    type="submit" 
+                    variant="primary" 
+                    fullWidth
+                    disabled={isLoading}
+                >
+                    {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                </Button>
+            </form>
+
+            {/* Đăng nhập bằng mạng xã hội */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-center text-gray-600 mb-4">Hoặc tiếp tục với</p>
+                <div className="space-y-3">
+                    <Button
+                        variant="outline"
+                        fullWidth
+                        icon={FaFacebook}
+                        onClick={() => handleSocialLogin('facebook')}
+                        className="flex items-center justify-center gap-2"
+                    >
+                        Tiếp tục với Facebook
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        fullWidth
+                        icon={FaGoogle}
+                        onClick={() => handleSocialLogin('google')}
+                        className="flex items-center justify-center gap-2"
+                    >
+                        Tiếp tục với Google
+                    </Button>
+                </div>
+            </div>
+
+            {/* Demo credentials (chỉ cho môi trường development) */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-2">Demo credentials:</p>
+                    <p className="text-xs text-gray-500">Email: patient1@example.com</p>
+                    <p className="text-xs text-gray-500">Phone: 0912345678</p>
+                    <p className="text-xs text-gray-500">Password: password123</p>
+                </div>
+            )}
         </div>
-
-        <Button type="submit" variant="primary" fullWidth>
-          Đăng nhập
-        </Button>
-      </form>
-
-      <div className="mt-8 pt-8 border-t border-gray-200">
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            fullWidth
-            icon={FaFacebook}
-            onClick={() => handleSocialLogin('facebook')}
-          >
-            Tiếp tục với Facebook
-          </Button>
-
-          <Button
-            variant="outline"
-            fullWidth
-            icon={FaGoogle}
-            onClick={() => handleSocialLogin('google')}
-          >
-            Tiếp tục với Google
-          </Button>
-        </div>
-      </div>
-    </div>
     );
 }
+
 export default Login;

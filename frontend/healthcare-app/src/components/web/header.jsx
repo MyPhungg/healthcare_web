@@ -1,16 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, User, Search } from 'lucide-react';
+import { Bell, User, Search, LogOut, InspectionPanelIcon } from 'lucide-react';
 
 const Header = () => {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false); // TODO: Get from auth context
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userInfo, setUserInfo] = useState(null); // TODO: Get from auth context
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+  const checkAuthStatus = () => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
 
-  return (
+    if (token && userData) {
+      try{
+        const user = JSON.parse(userData);
+        setIsLoggedIn(true);
+        setUserInfo(user);
+      } catch(err){
+        console.error("Error parsing user data from localStorage", err);
+        clearAuthData();
+      }
+    }
+    else {
+      setIsLoggedIn(false);
+      setUserInfo(null);
+    }
+  };
+  const handleLogout = () => {
+    clearAuthData();
+    setIsLoggedIn(false);
+    setUserInfo(null);
+    setShowUserMenu(false);
+    navigate('/home');
+  };
+const clearAuthData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+};
+
+return (
     <header className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg fixed w-full z-10">
       <div className="container mx-auto px-4">
         {/* Top Bar - User Info */}
+        {isLoggedIn && (
         <div className="flex justify-end items-center py-2">
           <div className="flex items-center gap-4">
             <button className="text-white hover:text-gray-200 transition-colors">
@@ -23,7 +58,7 @@ const Header = () => {
                 className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
               >
                 <User size={20} />
-                <span className="text-sm">User đăng nhập</span>
+                <span className="text-sm">{userInfo?.username || userInfo?.email || 'User'}</span>
               </button>
 
               {/* Dropdown Menu */}
@@ -43,7 +78,7 @@ const Header = () => {
                   </Link>
                   <button 
                     className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100"
-                    onClick={() => {/* TODO: Logout */}}
+                    onClick={handleLogout}
                   >
                     Đăng xuất
                   </button>
@@ -52,7 +87,7 @@ const Header = () => {
             </div>
           </div>
         </div>
-
+        )}
         {/* Main Navigation */}
         <nav className="bg-white rounded-full px-8 py-4 mb-6 shadow-md">
           <div className="flex items-center justify-between">
@@ -90,6 +125,7 @@ const Header = () => {
             </div>
 
             {/* Auth Buttons */}
+            {!isLoggedIn && (
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/login')}
@@ -104,6 +140,7 @@ const Header = () => {
                 Sign up
               </button>
             </div>
+            )}
           </div>
         </nav>
       </div>

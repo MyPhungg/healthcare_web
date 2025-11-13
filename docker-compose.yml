@@ -9,6 +9,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: user_service_db
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-filesystem=utf8mb4
     ports:
       - "3307:3306"
     volumes:
@@ -36,6 +40,8 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
       - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+    env_file:
+      - .env
     depends_on:
       user_db:
         condition: service_healthy
@@ -50,6 +56,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: appointment_service_db
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-filesystem=utf8mb4
     ports:
       - "3308:3306"
     volumes:

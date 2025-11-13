@@ -154,6 +154,6 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     private String generateDoctorId() {
-        return "DOC_" + UUID.randomUUID().toString().substring(0, 8);
+        return "doc" + UUID.randomUUID().toString().substring(0, 8);
     }
 }

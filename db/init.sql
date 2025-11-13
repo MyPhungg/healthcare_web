@@ -56,7 +56,6 @@ CREATE TABLE schedule (
     consultation_fee DECIMAL(10, 2),
     slot_duration INT NOT NULL -- tính bằng phút
 );
-
 CREATE TABLE appointment (
     appointment_id VARCHAR(50) PRIMARY KEY,
     schedule_id VARCHAR(50) NOT NULL,
@@ -79,8 +78,9 @@ CREATE TABLE day_off (
     reason TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(50) NOT NULL,
+    status ENUM('ENABLED', 'DISABLED') DEFAULT 'ENABLED',
     UNIQUE (doctor_id, date_off)
-);
+
 -- INSERT DATA
 INSERT INTO user (user_id, email, phone, password, role)
 VALUES (
@@ -303,13 +303,11 @@ INSERT INTO schedule (
     consultation_fee,
     slot_duration
 ) VALUES
-    ('sch30000001', 'doc20000001', 'MON,WED,FRI', '08:00:00', '12:00:00', 300000.00, 30),
-    ('sch30000002', 'doc20000002', 'TUE,THU', '14:00:00', '18:00:00', 450000.00, 20),
-    ('sch30000003', 'doc20000001', 'SUN', '08:00:00', '11:00:00', 300000.00, 30),
-    ('sch30000004', 'doc20000003', 'SAT', '16:00:00', '20:00:00', 500000.00, 45),
-    ('sch30000005', 'doc20000002', 'MON', '09:00:00', '13:00:00', 450000.00, 20);
+    ('sch30000001', 'doc20000001', 'MON,TUE,WED,THU,FRI,SAT,SUN', '08:00:00', '12:00:00', 300000.00, 30),
+    ('sch30000002', 'doc20000002', 'MON,TUE,WED,THU,FRI,SAT,SUN', '14:00:00', '18:00:00', 450000.00, 20),
+    ('sch30000003', 'doc20000003', 'MON,TUE,WED,THU,FRI,SAT,SUN', '16:00:00', '20:00:00', 500000.00, 45);
 
--- ✅ Dữ liệu mẫu cho appointment
+
 INSERT INTO appointment (
     appointment_id,
     schedule_id,
@@ -323,6 +321,6 @@ INSERT INTO appointment (
 ) VALUES
     ('app40000001', 'sch30000001', 'pat10000001', 'CONFIRMED', '2025-11-03', '08:00:00', '08:30:00', 'user89012345', 'Bé bị sốt và ho liên tục 3 ngày.'),
     ('app40000002', 'sch30000002', 'pat10000002', 'PENDING', '2025-11-04', '14:00:00', '14:20:00', 'user23456789', 'Khám sức khỏe định kỳ.'),
-    ('app40000003', 'sch30000003', 'pat10000003', 'COMPLETED', '2025-11-02', '09:00:00', '09:30:00', 'user89012345', 'Tái khám sau khi dùng thuốc.'),
-    ('app40000004', 'sch30000005', 'pat10000001', 'CANCELLED', '2025-11-03', '10:00:00', '10:20:00', 'user23456789', 'Bệnh nhân bận đột xuất.'),
-    ('app40000005', 'sch30000004', 'pat10000003', 'CONFIRMED', '2025-11-01', '16:00:00', '16:45:00', 'user89012345', 'Khám răng và lấy cao răng.');
+    ('app40000003', 'sch30000003', 'pat10000001', 'COMPLETED', '2025-11-02', '09:00:00', '09:30:00', 'user89012345', 'Tái khám sau khi dùng thuốc.'),
+    ('app40000004', 'sch30000001', 'pat10000001', 'CANCELLED', '2025-11-03', '10:00:00', '10:20:00', 'user23456789', 'Bệnh nhân bận đột xuất.'),
+    ('app40000005', 'sch30000003', 'pat10000003', 'CONFIRMED', '2025-11-01', '16:00:00', '16:45:00', 'user89012345', 'Khám răng và lấy cao răng.');

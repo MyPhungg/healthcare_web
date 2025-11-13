@@ -79,8 +79,6 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
-
         <!-- THÊM 3 THƯ VIỆN JWT NÀY -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

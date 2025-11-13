@@ -15,7 +15,11 @@ public class SecurityConfig {
                         .anyRequest().permitAll()
                 )
                 // Vô hiệu hóa CSRF (rất quan trọng khi tắt bảo mật)
-                .csrf(csrf -> csrf.disable());
+                .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())  // tắt form login
+                    .httpBasic(basic -> basic.disable()); // tắt basic auth
+
+                
 
         return http.build();
     }

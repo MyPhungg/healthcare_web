@@ -1,12 +1,14 @@
 package com.healthcare.user_service.service;
 
 import com.healthcare.user_service.common.CodeGeneratorUtils;
+import com.healthcare.user_service.dto.UpdateUserRequest;
 import com.healthcare.user_service.entity.User;
 import com.healthcare.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -99,5 +101,85 @@ public class UserService {
 //        }
 //        userRepository.deleteById(userId);
 //    }
+//=======================NEW method ================/
+    public List<User> getAllUsers(){
+        return userRepository.findAll();
+    }
 
+    //UPDATE user
+    public User updateUser(String userId, UpdateUserRequest request)
+    {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found with id: "+userId));
+        //Kiểm tra tên đã trùng (nếu có)
+        if (request.getUsername() != null &&
+                !request.getUsername().equals(user.getUsername()) &&
+                userRepository.existsByUsername(request.getUsername()))
+        {
+            throw new RuntimeException("Username is already exists");
+        }
+        //Kiem tra email trung neu co
+        if (request.getEmail() != null &&
+                !request.getEmail().equals(user.getEmail()) &&
+                userRepository.existsByEmail(request.getEmail()))
+        {
+            throw new RuntimeException("Email is already exists");
+        }
+        //Kiem tra sdt trung neu co
+        if (request.getPhone() != null &&
+                !request.getPhone().equals(user.getPhone()) &&
+                userRepository.existsByPhone(request.getPhone()))
+        {
+            throw new RuntimeException("Phone is already exists");
+        }
+
+        //Cap nhat thong tin
+        if (request.getUsername() != null){
+            user.setUsername(request.getUsername());
+        }
+        if (request.getEmail() != null){
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null){
+            user.setPhone(request.getPhone());
+        }
+        if (request.getIsActive() != null){
+            user.setIsActive(request.getIsActive());
+        }
+
+        return userRepository.save(user);
+    }
+    // DELETE USER (hard delete)
+    public void deleteUser(String userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found with id: " + userId);
+        }
+        userRepository.deleteById(userId);
+
+    }
+
+    // DEACTIVATE USER (soft delete)
+    public User deactivateUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        user.setIsActive(false);
+        return userRepository.save(user);
+    }
+
+    // ACTIVATE USER
+    public User activateUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        user.setIsActive(true);
+        return userRepository.save(user);
+    }
+
+    // GET USER BY EMAIL
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    // GET USER BY USERNAME
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
 }

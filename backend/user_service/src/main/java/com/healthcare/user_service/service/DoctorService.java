@@ -13,4 +13,5 @@ public interface DoctorService {
     DoctorDTO updateDoctor(String doctorId, DoctorRequest doctorRequest);
     void deleteDoctor(String doctorId);
     boolean existsByUserId(String userId);
+    String getUserIdByDoctorId(String doctorId);
 }

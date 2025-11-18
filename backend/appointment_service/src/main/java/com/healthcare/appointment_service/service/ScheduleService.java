@@ -1,5 +1,6 @@
 package com.healthcare.appointment_service.service;
 
+import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.common.CodeGeneratorUtils;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.entity.DayOff;
@@ -53,7 +54,7 @@ public class ScheduleService {
         String dayOfWeek = date.getDayOfWeek().name().substring(0,3);
 
         // Lấy lịch hẹn trong ngày
-        List<Appointment> bookedAppointment = appointmentRepository.findByScheduleIdAndAppointmentDate(schedule.getScheduleId(), date);
+        List<Appointment> bookedAppointment = appointmentRepository.findByScheduleIdAndAppointmentDateAndStatusNot(schedule.getScheduleId(), date, AppointmentStatus.CANCELLED);
 
         // Lấy list khung giờ đã chiếm
         Set<LocalTime> bookedTimes = bookedAppointment.stream()

@@ -8,6 +8,7 @@ import lombok.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -18,13 +19,14 @@ import java.util.List;
 public class DoctorController {
     private final DoctorService doctorService;
 
+
     @PostMapping
     public ResponseEntity<DoctorDTO> createDoctor(@Valid @RequestBody DoctorRequest doctorRequest)
     {
         DoctorDTO createdDoctor = doctorService.createDoctor(doctorRequest);
         return new ResponseEntity<>(createdDoctor, HttpStatus.CREATED);
     }
-
+    @PreAuthorize("hasRole('ADMIN) or @userSecurity.isOwnProfile(authentication, #doctorId)")
     @GetMapping("/{doctorId}")
     public ResponseEntity<DoctorDTO> getDoctorById(@PathVariable String doctorId)
     {
@@ -84,5 +86,13 @@ public class DoctorController {
     {
         boolean exists = doctorService.existsByUserId(userId);
         return ResponseEntity.ok(exists);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or @userSecurity.isOwnProfile(authentication, #doctorId)")
+    @GetMapping("/userId/{doctorId}")
+    public ResponseEntity<String> getUserIdByDoctorId(@PathVariable String doctorId)
+    {
+        String userId = doctorService.getUserIdByDoctorId(doctorId);
+        return ResponseEntity.ok(userId);
     }
 }

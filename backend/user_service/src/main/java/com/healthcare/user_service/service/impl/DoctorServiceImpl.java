@@ -7,11 +7,13 @@ import com.healthcare.user_service.entity.Gender;
 import com.healthcare.user_service.repository.DoctorRepository;
 import com.healthcare.user_service.service.DoctorService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
@@ -156,4 +158,13 @@ public class DoctorServiceImpl implements DoctorService {
     private String generateDoctorId() {
         return "doc" + UUID.randomUUID().toString().substring(0, 8);
     }
+    @Override
+    public String getUserIdByDoctorId(String doctorId){
+        String userId = doctorRepository.findUserIdByDoctorId(doctorId);
+        System.out.println("Type of userId: " + userId.getClass().getName());
+        System.out.println("Value of userId: " + userId);
+        log.info("Type of userId: "+ userId.getClass().getName());
+        log.info("Value of userId: " + userId);
+        return userId;    }
+
 }

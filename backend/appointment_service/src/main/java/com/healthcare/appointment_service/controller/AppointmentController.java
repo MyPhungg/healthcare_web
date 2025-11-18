@@ -1,5 +1,6 @@
 package com.healthcare.appointment_service.controller;
 
+import com.healthcare.appointment_service.dto.AppointmentInfo;
 import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.service.AppointmentService;
@@ -16,7 +17,7 @@ public class AppointmentController {
     AppointmentService appointmentService;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request) {
+    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request, @RequestHeader("Authorization") String token) {
         try {
             appointmentService.createAppointment(
                     request.getScheduleId(),
@@ -25,7 +26,8 @@ public class AppointmentController {
                     request.getAppointmentStart(),
                     request.getAppointmentEnd(),
                     request.getInteractedBy(),
-                    request.getReason()
+                    request.getReason(),
+                    token
             );
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
@@ -63,6 +65,16 @@ public class AppointmentController {
         }
         catch (RuntimeException e){
             return ResponseEntity.badRequest().body("Không thể lấy danh sách lịch hẹn của bệnh nhân" + e.getMessage());
+        }
+    }
+    @GetMapping("/info")
+    public AppointmentInfo getAppointmentInfo(@RequestParam String appointmentId, @RequestHeader("Authorization") String token){
+        try{
+            AppointmentInfo info = appointmentService.getAppointmentInfo(appointmentId, token);
+            return info;
+        }
+        catch (Exception e){
+            throw new RuntimeException ("Không thể lấy danh sách lịch hẹn của bệnh nhân" + e.getMessage());
         }
     }
 }

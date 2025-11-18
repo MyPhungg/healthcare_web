@@ -81,6 +81,16 @@ CREATE TABLE day_off (
     status ENUM('ENABLED', 'DISABLED') DEFAULT 'ENABLED',
     UNIQUE (doctor_id, date_off)
 
+CREATE TABLE notification (
+    notification_id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    delivery_status ENUM('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+    read_status ENUM('READ', 'UNREAD') NOT NULL DEFAULT 'UNREAD'
+);
+
 -- INSERT DATA
 INSERT INTO user (user_id, email, phone, password, role)
 VALUES (

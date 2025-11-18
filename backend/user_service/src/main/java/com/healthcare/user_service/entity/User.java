@@ -123,7 +123,7 @@ public class User {
     public enum AuthProvider {
         LOCAL, GOOGLE, FACEBOOK
     }
-//    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-//    private Patient patient;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Patient patient;
 
 }

@@ -55,10 +55,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwtTokenProvider.validateToken(token)) {
                 String userId = jwtTokenProvider.getUserIdFromToken(token);
+                String role   = jwtTokenProvider.getRoleFromToken(token);
                 logger.info("JWT Filter: token valid, userId = {}", userId);
 
                 UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                        new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                Collections.singleton(() ->  role)
+                        );
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 //Tiếp tục filter chain
                 filterChain.doFilter(request, response);

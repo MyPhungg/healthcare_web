@@ -44,8 +44,8 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
       - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
-    env_file:
-      - .env
+#    env_file:
+#      - .env
     depends_on:
       user_db:
         condition: service_healthy

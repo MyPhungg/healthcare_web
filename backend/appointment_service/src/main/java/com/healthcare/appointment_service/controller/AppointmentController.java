@@ -3,11 +3,13 @@ package com.healthcare.appointment_service.controller;
 import com.healthcare.appointment_service.dto.AppointmentInfo;
 import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
+import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
 import com.healthcare.appointment_service.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -17,7 +19,7 @@ public class AppointmentController {
     AppointmentService appointmentService;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request) {
         try {
             appointmentService.createAppointment(
                     request.getScheduleId(),
@@ -26,8 +28,7 @@ public class AppointmentController {
                     request.getAppointmentStart(),
                     request.getAppointmentEnd(),
                     request.getInteractedBy(),
-                    request.getReason(),
-                    token
+                    request.getReason()
             );
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
@@ -68,13 +69,16 @@ public class AppointmentController {
         }
     }
     @GetMapping("/info")
-    public AppointmentInfo getAppointmentInfo(@RequestParam String appointmentId, @RequestHeader("Authorization") String token){
-        try{
-            AppointmentInfo info = appointmentService.getAppointmentInfo(appointmentId, token);
+    public AppointmentInfo getAppointmentInfo(@RequestParam String appointmentId) {
+        try {
+            AppointmentInfo info = appointmentService.getAppointmentInfo(appointmentId);
             return info;
-        }
-        catch (Exception e){
-            throw new RuntimeException ("Không thể lấy danh sách lịch hẹn của bệnh nhân" + e.getMessage());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Không thể lấy thông tin lịch hẹn: " + e.getMessage());
         }
     }
+
+
 }

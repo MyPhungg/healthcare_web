@@ -18,7 +18,7 @@ public class NotificationEvent {
     private String userId;
     private String appointmentId;
     private String status;
-    private String token;
+//    private String token;
 //
 //    public NotificationEvent(String type, String message, String recipient, String userId, String appointmentId, String status) {
 //    }

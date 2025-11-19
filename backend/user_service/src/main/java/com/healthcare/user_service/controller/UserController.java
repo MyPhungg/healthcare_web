@@ -39,7 +39,7 @@ public class UserController {
 
     //getusers by id
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN) or @userSecurity.isOwnProfile(authentication, #userId)")
+//    @PreAuthorize("hasRole('ADMIN) or @userSecurity.isOwnProfile(authentication, #userId)")
     public ResponseEntity<UserResponse> getUserById(@PathVariable String userId)
     {
         try

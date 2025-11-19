@@ -12,10 +12,12 @@ import java.sql.Time;
 import java.util.List;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class CreateScheduleRequest {
+@NoArgsConstructor
+public class ScheduleDTO {
+    private String scheduleId;
     private String doctorId;
+    // Lưu các ngày làm việc: MON,TUE,WED,...
     private String workingDays;
     private Time startTime;
     private Time endTime;

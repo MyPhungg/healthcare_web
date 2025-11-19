@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "appointment-service")
 public interface AppointmentClient {
-    @GetMapping("/info")
-    public AppointmentInfo getAppointmentInfo(@RequestParam String appointmentId, @RequestHeader("Authorization") String token);
+    @GetMapping("/appointments/info")
+    public AppointmentInfo getAppointmentInfo(@RequestParam String appointmentId); //, @RequestHeader("Authorization") String token
 
 }

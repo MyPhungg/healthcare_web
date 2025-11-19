@@ -3,6 +3,7 @@ package com.healthcare.appointment_service.controller;
 import com.healthcare.appointment_service.dto.ChangeScheduleRequest;
 import com.healthcare.appointment_service.dto.CreateScheduleRequest;
 import com.healthcare.appointment_service.entity.Schedule;
+import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
 import com.healthcare.appointment_service.service.ScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -71,4 +72,15 @@ public class ScheduleController {
         }
     }
 
+    @GetMapping("/speciality")
+    public List<ScheduleBySpeciality> getSheduleBySpeciality(String specialityId, LocalDate date) {
+        try {
+            List<ScheduleBySpeciality> list = scheduleService.getSheduleBySpeciality(specialityId, date);
+            return list;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Không thể lấy thông tin lịch hẹn: " + e.getMessage());
+        }
+    }
 }

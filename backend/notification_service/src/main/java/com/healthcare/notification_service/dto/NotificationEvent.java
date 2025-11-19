@@ -18,7 +18,7 @@ public class NotificationEvent {
     private String userId;
     private String appointmentId;
     private String status;
-    private String token;
+//    private String token;
 //    private String metadata;
 //    private LocalDateTime sentAt;
 //    private String scheduleId;

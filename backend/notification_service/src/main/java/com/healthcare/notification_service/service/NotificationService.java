@@ -121,15 +121,22 @@ public class NotificationService {
                 log.warn("Không tìm thấy email người dùng: {}", notification.getUserId());
                 throw new RuntimeException("Không tìm thấy email của người dùng {}");
             }
-            AppointmentInfo info = appointmentClient.getAppointmentInfo(event.getAppointmentId(), event.getToken());
+            AppointmentInfo info = appointmentClient.getAppointmentInfo(event.getAppointmentId()); //, event.getToken()
 
-            // Tạo nội dung email
-            String subject = "Thông báo lịch hẹn - Appointment Notification";
-            String message = buildEmailMessage(info);
+            if(event.getType().equals("APPOINTMENT_CREATED")){
+// Tạo nội dung email
+                String subject = "Thông báo lịch hẹn - Appointment Notification";
+                String message = buildEmailMessageForCreate(info);
+                emailService.sendSimpleEmail(event.getRecipient(), subject, message);
 
-            // Gửi email
-            emailService.sendSimpleEmail(event.getRecipient(), subject, message);
-            // For now, just log and return true
+            }
+            else if(event.getType().equals("APPOINTMENT_CANCELLED")){
+                String subject = "Thông báo hủy lịch hẹn - Appointment Cancellation Notification";
+                String message = buildEmailMessageForCancel(info);
+                emailService.sendSimpleEmail(event.getRecipient(), subject, message);
+            }
+
+
             log.info("Sending appointment notification to user: {}. Message: {}",
                     notification.getUserId(), notification.getMessage());
 
@@ -172,7 +179,7 @@ public class NotificationService {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
 
     }
-    private String buildEmailMessage(AppointmentInfo info) {
+    private String buildEmailMessageForCreate(AppointmentInfo info) {
         return String.format("""
             Kính gửi bệnh nhân,
             
@@ -197,4 +204,43 @@ public class NotificationService {
         );
     }
 
+    private String buildEmailMessageForCancel(AppointmentInfo info) {
+        return String.format("""
+            Kính gửi bệnh nhân,
+            
+            Cuộc hẹn của bạn với bác sĩ %s thuộc chuyên khoa (%s) tại phòng khám %s, địa chỉ: %s, %s, %s.
+            Ngày hẹn: %s
+            Thời gian: %s - %s
+            Đã được hủy thành công!
+            
+            Trân trọng,
+            Đội ngũ hỗ trợ
+            
+            """,
+                // Phiên bản tiếng Việt
+                info.getDoctorName(),
+                info.getSpecialityName(),
+                info.getClinicName(),
+                info.getAddress(),
+                info.getDistrict(),
+                info.getCity(),
+                info.getAppointmentDate(),
+                info.getAppointmentStart(),
+                info.getAppointmentEnd()
+        );
+    }
+
+    public List<Notification> getAllNotification() {
+        return notificationRepository.findAll();
+    }
+
+    public Notification changeReadStatus(String notificationId){
+        Notification noti = notificationRepository.findById(notificationId)
+                .orElseThrow(()-> new RuntimeException("Không tìm thấy thông báo"));
+        if(noti.getReadStatus()== Notification.ReadStatus.READ){
+            return noti;
+        }
+        noti.setReadStatus(Notification.ReadStatus.READ);
+        return notificationRepository.save(noti);
+    }
 }

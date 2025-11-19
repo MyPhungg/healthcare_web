@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -26,7 +28,7 @@ public class DoctorController {
         DoctorDTO createdDoctor = doctorService.createDoctor(doctorRequest);
         return new ResponseEntity<>(createdDoctor, HttpStatus.CREATED);
     }
-    @PreAuthorize("hasRole('ADMIN) or @userSecurity.isOwnProfile(authentication, #doctorId)")
+//    @PreAuthorize("hasRole('ADMIN) or @userSecurity.isOwnProfile(authentication, #doctorId)")
     @GetMapping("/{doctorId}")
     public ResponseEntity<DoctorDTO> getDoctorById(@PathVariable String doctorId)
     {
@@ -43,8 +45,8 @@ public class DoctorController {
         List<DoctorDTO> doctors = doctorService.getAllDoctors();
         return ResponseEntity.ok(doctors);
     }
-    @GetMapping("/speciality/{specialityId}")
-    public ResponseEntity<List<DoctorDTO>> getDoctorBySpeciality(@PathVariable String specialityId)
+    @GetMapping("/speciality")
+    public ResponseEntity<List<DoctorDTO>> getDoctorBySpeciality(@RequestParam String specialityId, @RequestParam LocalDate date)
     {
         List<DoctorDTO> doctors = doctorService.getDoctorsBySpeciality(specialityId);
         return ResponseEntity.ok(doctors);

@@ -1,5 +1,6 @@
 package com.healthcare.appointment_service.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.healthcare.appointment_service.common.AppointmentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -48,6 +49,11 @@ public class Appointment {
 
     @Column(name = "reason")
     private String reason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id", insertable = false, updatable = false)
+    @JsonBackReference
+    private Schedule schedule;
 
 
 }

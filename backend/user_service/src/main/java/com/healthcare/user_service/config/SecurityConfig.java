@@ -33,9 +33,11 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/api/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/patients/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
+                        .requestMatchers("/appointments/**").permitAll()
+//                        .requestMatchers("/api/patients/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form.disable())

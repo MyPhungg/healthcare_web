@@ -1,5 +1,6 @@
 package com.healthcare.appointment_service.repository;
 
+import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.entity.Appointment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,7 +27,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
             "WHERE a.patientId = :patientId " +
             "AND a.appointmentDate = :date " +
             "AND a.appointmentStart < :endTime " +
-            "AND a.appointmentEnd > :startTime")
+            "AND a.appointmentEnd > :startTime " +
+            "AND a.status <> 'CANCELLED'")
     boolean existsTimeSlotOverlap(
             @Param("patientId") String patientId,
             @Param("date") LocalDate date,
@@ -36,6 +38,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
 
     List<Appointment> findByScheduleId(String scheduleId);
     List<Appointment> findByPatientId(String patientId);
-    List<Appointment> findByScheduleIdAndAppointmentDate(String scheduleId, LocalDate appointmentDate);
+    List<Appointment> findByScheduleIdAndAppointmentDateAndStatusNot(
+            String scheduleId,
+            LocalDate appointmentDate,
+            AppointmentStatus status
+    );
+
 
 }

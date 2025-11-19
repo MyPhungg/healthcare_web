@@ -1,5 +1,6 @@
 package com.healthcare.appointment_service.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.sql.Time;
+import java.util.List;
 
 @Entity
 @Table(name = "schedule")
@@ -37,4 +39,8 @@ public class Schedule {
 
     @Column(name = "slot_duration", nullable = false)
     private Integer slotDuration; // phút
+
+    @OneToMany(mappedBy = "schedule", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<Appointment> appointments;
 }

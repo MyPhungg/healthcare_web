@@ -8,11 +8,15 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
       MYSQL_DATABASE: user_service_db
     command:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --character-set-filesystem=utf8mb4
+      --init-connect='SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci'
+      --skip-character-set-client-handshake
     ports:
       - "3307:3306"
     volumes:
@@ -40,8 +44,8 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
       - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
-    env_file:
-      - .env
+#    env_file:
+#      - .env
     depends_on:
       user_db:
         condition: service_healthy

@@ -40,7 +40,7 @@ public class DoctorController {
         DoctorDTO doctor = doctorService.getDoctorByUserId(userId);
         return ResponseEntity.ok(doctor);
     }
-    @GetMapping
+    @GetMapping(produces = "application/json;charset=UTF-8")
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() { // THÊM API này
         List<DoctorDTO> doctors = doctorService.getAllDoctors();
         return ResponseEntity.ok(doctors);

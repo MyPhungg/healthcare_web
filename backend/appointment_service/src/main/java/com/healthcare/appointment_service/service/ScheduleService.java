@@ -1,13 +1,17 @@
 package com.healthcare.appointment_service.service;
 
+import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.common.CodeGeneratorUtils;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.entity.DayOff;
 import com.healthcare.appointment_service.entity.Schedule;
+import com.healthcare.appointment_service.feign.DoctorClient;
+import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
 import com.healthcare.appointment_service.repository.AppointmentRepository;
 import com.healthcare.appointment_service.repository.DayOffRepository;
 import com.healthcare.appointment_service.repository.ScheduleRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,19 +24,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.healthcare.appointment_service.feign.dto.DoctorDTO;
 
 @Service
+@RequiredArgsConstructor
 public class ScheduleService {
-
-    @Autowired
-    private ScheduleRepository scheduleRepository;
-
-    @Autowired
-    private DayOffRepository dayOffRepository;
-
-    @Autowired
-    private AppointmentRepository appointmentRepository;
-
+    private final ScheduleRepository scheduleRepository;
+    private final DayOffRepository dayOffRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final DoctorClient doctorClient;
     // lấy, thêm, sửa
     // Lấy lịch làm việc của bác sĩ
 
@@ -53,7 +53,7 @@ public class ScheduleService {
         String dayOfWeek = date.getDayOfWeek().name().substring(0,3);
 
         // Lấy lịch hẹn trong ngày
-        List<Appointment> bookedAppointment = appointmentRepository.findByScheduleIdAndAppointmentDate(schedule.getScheduleId(), date);
+        List<Appointment> bookedAppointment = appointmentRepository.findByScheduleIdAndAppointmentDateAndStatusNot(schedule.getScheduleId(), date, AppointmentStatus.CANCELLED);
 
         // Lấy list khung giờ đã chiếm
         Set<LocalTime> bookedTimes = bookedAppointment.stream()
@@ -120,6 +120,23 @@ public class ScheduleService {
         scheduleRepository.save(exists);
         return exists;
     }
+
+    // Lấy danh sách lịch theo specialityId
+    public List<ScheduleBySpeciality> getSheduleBySpeciality(String specId, LocalDate date){
+        List<DoctorDTO> doctor = doctorClient.getDoctorBySpeciality(specId, date);
+        List<ScheduleBySpeciality> availableSchedule = new ArrayList<>();
+        for(DoctorDTO d:doctor){
+            ScheduleBySpeciality s = new ScheduleBySpeciality();
+            s.setDoctorDTO(d);
+            Schedule schedule = getScheduleByDoctorId(d.getDoctorId());
+            s.setFee(schedule.getConsultationFee());
+            s.setList(getAvailableSlots(d.getDoctorId(),date));
+            availableSchedule.add(s);
+        }
+        return availableSchedule;
+    }
+
+
 
 
 }

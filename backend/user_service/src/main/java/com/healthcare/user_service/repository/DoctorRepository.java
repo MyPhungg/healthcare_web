@@ -23,6 +23,9 @@ public interface DoctorRepository extends JpaRepository<Doctor, String>{
     @Query("SELECT d FROM Doctor d WHERE d.fullName LIKE %:name%")
     List<Doctor> findByFullNameContaining(@Param("name") String name);
 
+    @Query("SELECT d.userId FROM Doctor d WHERE d.doctorId = :doctorId")
+    String findUserIdByDoctorId(@Param("doctorId") String doctorId);
+
 
 
 }

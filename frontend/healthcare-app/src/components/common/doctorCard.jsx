@@ -11,7 +11,7 @@ const DoctorCard = ({ doctor }) => {
       </div>
       
       {/* Tên Bác sĩ */}
-      <p className="font-bold text-xl mb-3 text-gray-800">Bác sĩ {doctor.name}</p>
+      <p className="font-bold text-xl mb-3 text-gray-800">{doctor.fullName}</p>
       
       {/* Nút Xem chi tiết */}
       <Button 

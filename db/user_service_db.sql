@@ -9,12 +9,12 @@ CREATE TABLE user (
     role ENUM('PATIENT', 'DOCTOR', 'ADMIN') NOT NULL DEFAULT 'PATIENT',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE speciality (
     speciality_id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE patient (
     patient_id VARCHAR(50) PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE patient (
     profile_img VARCHAR(255),
     cover_img VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE doctor (
     doctor_id VARCHAR(50) PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE doctor (
     cover_img VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (speciality_id) REFERENCES speciality(speciality_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 INSERT INTO user (user_id, username, email, phone, password, role)
 VALUES
     ('user48291035', 'alice.p', 'alice.p@email.com', '0901111111', '123456', 'PATIENT'),
@@ -147,86 +147,36 @@ VALUES (
         'INSE567890'
     );
 INSERT INTO doctor (
-        doctor_id,
-        user_id,
-        full_name,
-        gender,
-        date_of_birth,
-        address,
-        district,
-        city,
-        speciality_id,
-        clinic_name,
-        clinic_description,
-        bio
-    )
-VALUES (
-        'doc20000001',
-        'user73918204',
-        'Bác sĩ Lê Văn Anh',
-        'MALE',
-        '1980-01-01',
-        '100 Nguyễn Trãi',
-        'Quận 5',
-        'Hồ Chí Minh',
-        'spec00000001',
-        'Phòng Khám Nhi Đồng Sài Gòn',
-        'Chuyên khám và điều trị bệnh Nhi khoa',
-        'Hơn 20 năm kinh nghiệm trong lĩnh vực nhi khoa.'
-    ),
-    (
-        'doc20000002',
-        'user83047591',
-        'Bác sĩ Trần Thị Mai',
-        'FEMALE',
-        '1970-12-31',
-        '20 Láng Hạ',
-        'Quận Đống Đa',
-        'Hà Nội',
-        'spec00000002',
-        'Bệnh Viện Đa Khoa Hồng Ngọc',
-        'Khám tổng quát, chuyên sâu nội khoa.',
-        'Chuyên gia hàng đầu về nội tổng quát và bệnh chuyển hóa.'
-    ),
-    (
-        'doc20000003',
-        'user48291035',
-        'Bác sĩ Phạm Hữu Đức',
-        'MALE',
-        '1985-06-15',
-        '350 Hoàng Diệu',
-        'Quận Hải Châu',
-        'Đà Nẵng',
-        'spec00000003',
-        'Nha Khoa Smile Care',
-        'Chuyên về chỉnh nha và nha khoa thẩm mỹ.',
-        'Đã thực hiện thành công hàng nghìn ca chỉnh nha phức tạp.'
-    ),
-    (
-        'doc20000004',
-        'user28491763',
-        'Bác sĩ Nguyễn Thị Hoa',
-        'FEMALE',
-        '1992-04-05',
-        '77 Điện Biên Phủ',
-        'Quận Hồng Bàng',
-        'Hải Phòng',
-        'spec00000004',
-        'Phòng Khám Da Liễu Trung Ương',
-        'Chẩn đoán và điều trị bệnh ngoài da.',
-        'Đạt chứng chỉ quốc tế về điều trị mụn và sẹo.'
-    ),
-    (
-        'doc20000005',
-        'user59102847',
-        'Bác sĩ Đỗ Mạnh Hùng',
-        'MALE',
-        '1978-08-22',
-        '300 Đường 3/2',
-        'Quận Ninh Kiều',
-        'Cần Thơ',
-        'spec00000005',
-        'Bệnh Viện Phụ Sản Quốc Tế',
-        'Tư vấn, khám thai và đỡ đẻ.',
-        'Chuyên khoa sản phụ với nhiều năm làm việc tại nước ngoài.'
-    );
+    doctor_id, user_id, full_name, gender, date_of_birth, address,
+    district, city, speciality_id, clinic_name, clinic_description, bio
+) VALUES
+(
+    'doc20000001', 'user73918204', 'Bác sĩ Lê Văn Anh', 'MALE', '1980-01-01',
+    '100 Nguyễn Trãi', 'Quận 5', 'Hồ Chí Minh', 'spec00000001',
+    'Phòng Khám Nhi Đồng Sài Gòn', 'Chuyên khám và điều trị bệnh Nhi khoa',
+    'Hơn 20 năm kinh nghiệm trong lĩnh vực nhi khoa.'
+),
+(
+    'doc20000002', 'user83047591', 'Bác sĩ Trần Thị Mai', 'FEMALE', '1970-12-31',
+    '20 Láng Hạ', 'Quận Đống Đa', 'Hà Nội', 'spec00000002',
+    'Bệnh Viện Đa Khoa Hồng Ngọc', 'Khám tổng quát, chuyên sâu nội khoa.',
+    'Chuyên gia hàng đầu về nội tổng quát và bệnh chuyển hóa.'
+),
+(
+    'doc20000003', 'user48291035', 'Bác sĩ Phạm Hữu Đức', 'MALE', '1985-06-15',
+    '350 Hoàng Diệu', 'Quận Hải Châu', 'Đà Nẵng', 'spec00000003',
+    'Nha Khoa Smile Care', 'Chuyên về chỉnh nha và nha khoa thẩm mỹ.',
+    'Đã thực hiện thành công hàng nghìn ca chỉnh nha phức tạp.'
+),
+(
+    'doc20000004', 'user28491763', 'Bác sĩ Nguyễn Thị Hoa', 'FEMALE', '1992-04-05',
+    '77 Điện Biên Phủ', 'Quận Hồng Bàng', 'Hải Phòng', 'spec00000004',
+    'Phòng Khám Da Liễu Trung Ương', 'Chẩn đoán và điều trị bệnh ngoài da.',
+    'Đạt chứng chỉ quốc tế về điều trị mụn và sẹo.'
+),
+(
+    'doc20000005', 'user59102847', 'Bác sĩ Đỗ Mạnh Hùng', 'MALE', '1978-08-22',
+    '300 Đường 3/2', 'Quận Ninh Kiều', 'Cần Thơ', 'spec00000005',
+    'Bệnh Viện Phụ Sản Quốc Tế', 'Tư vấn, khám thai và đỡ đẻ.',
+    'Chuyên khoa sản phụ với nhiều năm làm việc tại nước ngoài.'
+);

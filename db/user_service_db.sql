@@ -9,12 +9,12 @@ CREATE TABLE user (
     role ENUM('PATIENT', 'DOCTOR', 'ADMIN') NOT NULL DEFAULT 'PATIENT',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE speciality (
     speciality_id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE patient (
     patient_id VARCHAR(50) PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE patient (
     profile_img VARCHAR(255),
     cover_img VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE doctor (
     doctor_id VARCHAR(50) PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE doctor (
     cover_img VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (speciality_id) REFERENCES speciality(speciality_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 INSERT INTO user (user_id, username, email, phone, password, role)
 VALUES
     ('user48291035', 'alice.p', 'alice.p@email.com', '0901111111', '123456', 'PATIENT'),

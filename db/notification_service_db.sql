@@ -13,4 +13,4 @@ CREATE TABLE notification (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     delivery_status ENUM('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
     read_status ENUM('READ', 'UNREAD') NOT NULL DEFAULT 'UNREAD'
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;

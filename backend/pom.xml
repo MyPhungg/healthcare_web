@@ -14,7 +14,6 @@
     <packaging>pom</packaging>
     <name>backend-parent</name>
     <modules>
-        <module>common</module> <!-- Đảm bảo common đứng trước các service -->
         <module>appointment_service</module>
         <module>user_service</module>
         <module>notification_service</module>

@@ -5,19 +5,22 @@ import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
 import com.healthcare.appointment_service.service.AppointmentService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/appointments")
 public class AppointmentController {
-    @Autowired
-    AppointmentService appointmentService;
+    private final AppointmentService appointmentService;
 
+    @PreAuthorize("hasAnyAuthority('ADMIN','DOCTOR', 'PATIENT')")
     @PostMapping("/create")
     public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request) {
         try {

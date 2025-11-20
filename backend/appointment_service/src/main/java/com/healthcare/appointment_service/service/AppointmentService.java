@@ -7,10 +7,12 @@ import com.healthcare.appointment_service.dto.NotificationEvent;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.entity.Schedule;
 import com.healthcare.appointment_service.feign.DoctorClient;
+import com.healthcare.appointment_service.feign.SpecialityClient;
 import com.healthcare.appointment_service.feign.dto.PatientResponse;
 import com.healthcare.appointment_service.feign.PatientClient;
 import com.healthcare.appointment_service.feign.UserClient;
 import com.healthcare.appointment_service.feign.dto.DoctorDTO;
+import com.healthcare.appointment_service.feign.dto.SpecialityDTO;
 import com.healthcare.appointment_service.feign.dto.UserResponse;
 import com.healthcare.appointment_service.repository.AppointmentRepository;
 import com.healthcare.appointment_service.repository.ScheduleRepository;
@@ -34,6 +36,7 @@ public class AppointmentService {
     private final DoctorClient doctorClient;
     private final UserClient userClient;
     private final PatientClient patientClient;
+    private final SpecialityClient specialityClient;
     @Transactional
     public Appointment createAppointment(String scheduleId,
                                          String patientId,
@@ -163,6 +166,8 @@ public class AppointmentService {
         DoctorDTO doctor = doctorClient.getDoctorById(doctorId);
         log.info("✅ Received doctor info: {}", doctor);
 
+        SpecialityDTO speciality = specialityClient.getSpecialityById(doctor.getSpecialityId());
+
         // Tạo AppointmentInfo
         AppointmentInfo info = new AppointmentInfo(
                 doctor.getFullName(),
@@ -170,7 +175,7 @@ public class AppointmentService {
                 doctor.getDistrict(),
                 doctor.getCity(),
                 doctor.getClinicName(),
-                doctor.getSpecialityId(),
+                speciality.getName(),
                 app.getAppointmentDate(),
                 app.getAppointmentStart(),
                 app.getAppointmentEnd()

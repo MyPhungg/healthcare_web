@@ -1,10 +1,14 @@
 package com.healthcare.appointment_service.config;
 
+import com.healthcare.appointment_service.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+<<<<<<< HEAD
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -14,21 +18,39 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+=======
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@EnableWebSecurity
+@Configuration
+@RequiredArgsConstructor
+
+public class SecurityConfig {
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+>>>>>>> b8785a4263ae228f5ea738e534c44046f33cbf17
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CORS configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // CSRF disable
-                .csrf(csrf -> csrf.disable())
-                // Authorization - permit all requests
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
+
+
+                // Vô hiệu hóa bảo mật (Authorization) cho mọi request
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/actuator/**").permitAll()
+//                        .requestMatchers("/appointments/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
+//                        .requestMatchers("/schedules/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
+//                        .requestMatchers("/dayoffs/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
+                        .anyRequest().authenticated()
                 )
-                // Disable form login and basic auth
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
+                // Vô hiệu hóa CSRF (rất quan trọng khi tắt bảo mật)
+                .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())  // tắt form login
+                .httpBasic(basic -> basic.disable())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        ; // tắt basic auth
+
+                
 
         return http.build();
     }

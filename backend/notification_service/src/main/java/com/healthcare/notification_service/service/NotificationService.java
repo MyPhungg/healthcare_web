@@ -183,7 +183,7 @@ public class NotificationService {
         return String.format("""
             Kính gửi bệnh nhân,
             
-            Bạn có một cuộc hẹn với bác sĩ %s thuộc chuyên khoa (%s) tại phòng khám %s, địa chỉ: %s, %s, %s.
+            Bạn có một cuộc hẹn với bác sĩ %s thuộc chuyên khoa [%s] tại phòng khám %s, địa chỉ: %s, %s, %s.
             Ngày hẹn: %s
             Thời gian: %s - %s
             

@@ -124,14 +124,16 @@ public class ScheduleService {
     // Lấy danh sách lịch theo specialityId
     public List<ScheduleBySpeciality> getSheduleBySpeciality(String specId, LocalDate date){
         List<DoctorDTO> doctor = doctorClient.getDoctorBySpeciality(specId, date);
-        List<ScheduleBySpeciality> availableShcedule = new ArrayList<>();
+        List<ScheduleBySpeciality> availableSchedule = new ArrayList<>();
         for(DoctorDTO d:doctor){
             ScheduleBySpeciality s = new ScheduleBySpeciality();
             s.setDoctorDTO(d);
+            Schedule schedule = getScheduleByDoctorId(d.getDoctorId());
+            s.setFee(schedule.getConsultationFee());
             s.setList(getAvailableSlots(d.getDoctorId(),date));
-            availableShcedule.add(s);
+            availableSchedule.add(s);
         }
-        return availableShcedule;
+        return availableSchedule;
     }
 
 

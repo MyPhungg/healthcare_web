@@ -5,21 +5,20 @@ services:
     image: mysql:8.0
     container_name: user_db
     restart: always
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: user_service_db
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
-      MYSQL_DATABASE: user_service_db
-    command:
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --character-set-filesystem=utf8mb4
-      --init-connect='SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci'
-      --skip-character-set-client-handshake
     ports:
       - "3307:3306"
     volumes:
       - ./db/user_service_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql-config/my.cnf:/etc/mysql/conf.d/my.cnf
     networks:
       - healthcare_net
     healthcheck:
@@ -65,17 +64,20 @@ services:
     image: mysql:8.0
     container_name: appointment_db
     restart: always
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: appointment_service_db
-    command:
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --character-set-filesystem=utf8mb4
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
       - "3308:3306"
     volumes:
       - ./db/appointment_service_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql-config/my.cnf:/etc/mysql/conf.d/my.cnf
     networks:
       - healthcare_net
     healthcheck:
@@ -136,17 +138,20 @@ services:
     image: mysql:8.0
     container_name: notification_db
     restart: always
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: notification_service_db
-    command:
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --character-set-filesystem=utf8mb4
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
       - "3309:3306"
     volumes:
       - ./db/notification_service_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql-config/my.cnf:/etc/mysql/conf.d/my.cnf
     networks:
       - healthcare_net
     healthcheck:

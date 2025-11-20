@@ -8,7 +8,7 @@ CREATE TABLE schedule (
     end_time TIME NOT NULL,
     consultation_fee DECIMAL(10, 2),
     slot_duration INT NOT NULL -- tính bằng phút
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 CREATE TABLE appointment (
     appointment_id VARCHAR(50) PRIMARY KEY,
     schedule_id VARCHAR(50) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE appointment (
     interacted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     interacted_by VARCHAR(50) NOT NULL,
     reason TEXT
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 
 CREATE TABLE day_off (
     day_off_id VARCHAR(50) PRIMARY KEY,
@@ -33,7 +33,7 @@ CREATE TABLE day_off (
     created_by VARCHAR(50) NOT NULL,
     status ENUM('ENABLED', 'DISABLED') DEFAULT 'ENABLED',
     UNIQUE (doctor_id, date_off)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 
 INSERT INTO schedule (
     schedule_id,

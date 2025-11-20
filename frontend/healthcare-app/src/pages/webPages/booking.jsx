@@ -1,50 +1,407 @@
-import React, { useState } from 'react';
-import { User, Phone, Mail, Calendar, MapPin, FileText, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Phone, Mail, Calendar, MapPin, FileText, CreditCard, Clock } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import FormField from '../../components/common/formField';
 import Button from '../../components/common/button';
-import { useNavigate } from 'react-router-dom';
+
 const Booking = () => {
-  // Doctor info (from previous page/route)
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const doctorInfo = {
-    name: 'TS.BS. Long Giang Bình Tân',
-    specialty: 'Hiện đang làm việc tại: BV...',
-    experience: 'Có kinh nghiệm 10 năm trong ngành',
-    location: 'Thành phố Hồ Chí Minh',
-    image: '/doctor-placeholder.jpg' // Replace with actual image
-  };
+  
+  const doctorId = searchParams.get('doctorId');
+  const selectedDate = searchParams.get('date');
+  const selectedTime = searchParams.get('time');
+
+  const [doctorInfo, setDoctorInfo] = useState({
+    name: 'Đang tải...',
+    specialty: 'Đang tải...',
+    experience: 'Đang tải...',
+    location: 'Đang tải...',
+    price: 0,
+    clinicName: '',
+    address: '',
+    district: '',
+    city: ''
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [scheduleData, setScheduleData] = useState(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(selectedTime || '');
+  const [userId, setUserId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     patientName: '',
-    gender: 'male',
+    gender: 'FEMALE',
     phone: '',
     email: '',
     dateOfBirth: '',
     city: '',
     district: '',
     address: '',
+    insuranceNum: '',
     reason: '',
-    appointmentDate: '',
-    appointmentTime: '',
+    appointmentDate: selectedDate || '',
+    appointmentTime: selectedTime || '',
     paymentMethod: 'cash'
   });
 
+  // Generate time slots based on schedule
+  const generateTimeSlots = (schedule) => {
+    if (!schedule) return [];
+    
+    const slots = [];
+    const startTime = new Date(`1970-01-01T${schedule.startTime}`);
+    const endTime = new Date(`1970-01-01T${schedule.endTime}`);
+    const slotDuration = schedule.slotDuration || 30; // minutes
+    
+    let currentTime = new Date(startTime);
+    
+    while (currentTime < endTime) {
+      const timeString = currentTime.toTimeString().slice(0, 5);
+      slots.push(timeString);
+      
+      // Add slot duration
+      currentTime.setMinutes(currentTime.getMinutes() + slotDuration);
+    }
+    
+    return slots;
+  };
+
+  // Calculate end time based on start time and slot duration
+  const calculateEndTime = (startTime, slotDuration = 30) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endTime = new Date();
+    endTime.setHours(hours);
+    endTime.setMinutes(minutes + slotDuration);
+    return endTime.toTimeString().slice(0, 8);
+  };
+
+  // Get user info from token
+  const getUserIdFromToken = () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      
+      // Decode JWT token to get user info
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId || payload.sub;
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  };
+
+  // Fetch doctor info và schedule khi component mount
+  useEffect(() => {
+    const fetchDoctorInfo = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        if (!doctorId) {
+          throw new Error('Doctor ID is required');
+        }
+
+        // Get user ID from token
+        const currentUserId = getUserIdFromToken();
+        if (!currentUserId) {
+          throw new Error('Cannot get user information from token');
+        }
+        setUserId(currentUserId);
+
+        // Fetch doctor details
+        const doctorResponse = await fetch(
+          `http://localhost:8082/api/doctors/${doctorId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!doctorResponse.ok) {
+          throw new Error(`HTTP error! status: ${doctorResponse.status}`);
+        }
+
+        const doctorData = await doctorResponse.json();
+        console.log('Doctor data:', doctorData);
+
+        // Fetch schedule data
+        const scheduleResponse = await fetch(
+          `http://localhost:8081/schedules/by-doctor?doctorId=${doctorId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (scheduleResponse.ok) {
+          const scheduleData = await scheduleResponse.json();
+          console.log('Schedule data:', scheduleData);
+          setScheduleData(scheduleData);
+          
+          // Generate time slots from schedule
+          const timeSlots = generateTimeSlots(scheduleData);
+          setAvailableTimeSlots(timeSlots);
+        }
+
+        // Update doctor info state với dữ liệu thực tế từ API
+        setDoctorInfo({
+          name: doctorData.fullName || 'BS. Chưa có tên',
+          specialty: doctorData.clinicDescription || 'Chưa có chuyên khoa',
+          experience: doctorData.bio || 'Chưa có thông tin kinh nghiệm',
+          location: `${doctorData.district || ''}, ${doctorData.city || ''}`.trim() || 'Chưa có địa điểm',
+          price: scheduleData?.consultationFee || doctorData.price || 300000,
+          clinicName: doctorData.clinicName || 'Chưa có tên phòng khám',
+          address: doctorData.address || '',
+          district: doctorData.district || '',
+          city: doctorData.city || ''
+        });
+
+        // Update form data với ngày và giờ đã chọn
+        setFormData(prev => ({
+          ...prev,
+          appointmentDate: selectedDate || '',
+          appointmentTime: selectedTime || '',
+          city: doctorData.city || '',
+          district: doctorData.district || ''
+        }));
+
+        // Set selected time slot
+        if (selectedTime) {
+          setSelectedTimeSlot(selectedTime);
+        }
+
+      } catch (err) {
+        console.error('Error fetching doctor info:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (doctorId) {
+      fetchDoctorInfo();
+    } else {
+      setError('Không tìm thấy thông tin bác sĩ');
+      setLoading(false);
+    }
+  }, [doctorId, selectedDate, selectedTime]);
+
+  const handleTimeSlotClick = (timeSlot) => {
+    setSelectedTimeSlot(timeSlot);
+    setFormData(prev => ({
+      ...prev,
+      appointmentTime: timeSlot
+    }));
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Không cho phép thay đổi ngày và giờ khám
+    if (name === 'appointmentDate' || name === 'appointmentTime') {
+      return;
+    }
     setFormData({
       ...formData,
       [name]: value
     });
   };
 
-  const handleSubmit = (e) => {
+  // Create patient first, then create appointment
+  // Create patient first, then create appointment
+const createPatientAndAppointment = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token || !userId) {
+    throw new Error('Authentication required');
+  }
+
+  try {
+    // Step 1: Create patient
+    const patientData = {
+      fullName: formData.patientName,
+      gender: formData.gender,
+      dateOfBirth: formData.dateOfBirth,
+      address: formData.address,
+      district: formData.district,
+      city: formData.city,
+      insuranceNum: formData.insuranceNum || `BH${Date.now()}`,
+      profileImg: null,
+      coverImg: null
+    };
+
+    console.log('Creating patient:', patientData);
+
+    const patientResponse = await fetch(
+      `http://localhost:8082/api/patients/${userId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(patientData)
+      }
+    );
+
+    let patientResult;
+    const patientResponseText = await patientResponse.text();
+    
+    if (patientResponseText) {
+      try {
+        patientResult = JSON.parse(patientResponseText);
+      } catch (parseError) {
+        console.warn('Patient response is not JSON:', patientResponseText);
+        patientResult = { success: true }; // Fallback nếu response không phải JSON
+      }
+    } else {
+      patientResult = { success: true }; // Fallback nếu response trống
+    }
+
+    if (!patientResponse.ok) {
+      throw new Error(`Failed to create patient: ${patientResponse.status} - ${patientResponseText}`);
+    }
+
+    console.log('Patient created:', patientResult);
+
+    // Lấy patientId từ response - thử nhiều trường có thể có
+    const patientId = patientResult.patientId || patientResult.id || patientResult.data?.patientId || `pat${Date.now()}`;
+
+    // Step 2: Create appointment
+    const appointmentData = {
+      scheduleId: scheduleData?.scheduleId || 'sch30000001',
+      patientId: patientId,
+      appointmentDate: formData.appointmentDate,
+      appointmentStart: formData.appointmentTime + ':00',
+      appointmentEnd: calculateEndTime(formData.appointmentTime, scheduleData?.slotDuration || 30),
+      interactedBy: userId,
+      reason: formData.reason || 'Khám bệnh theo lịch hẹn'
+    };
+
+    console.log('Creating appointment:', appointmentData);
+
+    const appointmentResponse = await fetch(
+      'http://localhost:8081/appointments/create',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(appointmentData)
+      }
+    );
+
+    let appointmentResult;
+    const appointmentResponseText = await appointmentResponse.text();
+    
+    if (appointmentResponseText) {
+      try {
+        appointmentResult = JSON.parse(appointmentResponseText);
+      } catch (parseError) {
+        console.warn('Appointment response is not JSON:', appointmentResponseText);
+        appointmentResult = { success: true };
+      }
+    } else {
+      appointmentResult = { success: true };
+    }
+
+    if (!appointmentResponse.ok) {
+      throw new Error(`Failed to create appointment: ${appointmentResponse.status} - ${appointmentResponseText}`);
+    }
+
+    console.log('Appointment created:', appointmentResult);
+
+    return {
+      patientId,
+      appointmentId: appointmentResult.appointmentId || appointmentResult.id || appointmentResult.data?.appointmentId || `appt${Date.now()}`,
+      ...appointmentResult
+    };
+
+  } catch (error) {
+    console.error('Error in createPatientAndAppointment:', error);
+    throw error;
+  }
+};
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Booking data:', formData);
-    // TODO: Submit booking
+    try {
+      setSubmitting(true);
+      console.log('Submitting booking with data:', formData);
+      // Validate required fields
+      if (!formData.patientName || !formData.phone || !formData.email || 
+          !formData.dateOfBirth || !formData.appointmentDate || !formData.appointmentTime) {
+        alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
+      // Kiểm tra đã chọn giờ khám chưa
+      if (!selectedTimeSlot) {
+        alert('Vui lòng chọn giờ khám');
+        return;
+      }
+
+      // Create patient and appointment
+      const result = await createPatientAndAppointment();
+      
+      console.log('Booking process completed:', result);
+
+      // Chuyển đến trang thành công
+      navigate('/bookingsuccess', { 
+        state: { 
+          bookingId: result.appointmentId,
+          patientId: result.patientId,
+          doctorName: doctorInfo.name,
+          appointmentDate: formData.appointmentDate,
+          appointmentTime: formData.appointmentTime,
+          totalPrice: doctorInfo.price
+        }
+      });
+
+    } catch (err) {
+      console.error('Error creating booking:', err);
+      alert('Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại. ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const pricePerVisit = 300000;
-  const total = pricePerVisit;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 mt-30 flex items-center justify-center">
+        <div className="text-lg">Đang tải thông tin bác sĩ...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 mt-30 flex items-center justify-center">
+        <div className="text-red-500 text-lg">{error}</div>
+        <Button 
+          onClick={() => window.history.back()} 
+          variant="primary" 
+          className="ml-4"
+        >
+          Quay lại
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 mt-30">
@@ -65,42 +422,68 @@ const Booking = () => {
               <p className="text-sm text-gray-600 mb-1">{doctorInfo.specialty}</p>
               <p className="text-sm text-gray-600 mb-3">{doctorInfo.experience}</p>
               
-              <div className="flex items-center gap-2 text-gray-700 mb-4">
-                <MapPin size={18} />
-                <span className="text-sm">{doctorInfo.location}</span>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <MapPin size={18} />
+                  <span className="text-sm">{doctorInfo.clinicName}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700 pl-6">
+                  <span className="text-sm">{doctorInfo.address}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700 pl-6">
+                  <span className="text-sm">{doctorInfo.location}</span>
+                </div>
+              </div>
+
+              {/* Price Info */}
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-medium">Giá khám:</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {doctorInfo.price.toLocaleString('vi-VN')} đ
+                  </span>
+                </div>
               </div>
 
               {/* Date & Time Selection */}
-              <div className="border-t pt-4">
-                <FormField
-                  as="select"
-                  name="appointmentDate"
-                  value={formData.appointmentDate}
-                  onChange={handleChange}
-                  placeholder="Chọn ngày"
-                  required
-                  options={[
-                    { value: '2024-01-15', label: 'Thứ 2, 15/01/2024' },
-                    { value: '2024-01-16', label: 'Thứ 3, 16/01/2024' },
-                    { value: '2024-01-17', label: 'Thứ 4, 17/01/2024' },
-                  ]}
-                />
+              <div className="border-t pt-4 space-y-4">
+                {/* Ngày khám - Chỉ hiển thị, không cho chỉnh sửa */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ngày khám
+                  </label>
+                  <div className="p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                    {selectedDate || 'Chưa chọn ngày'}
+                  </div>
+                </div>
 
-                <FormField
-                  as="select"
-                  name="appointmentTime"
-                  value={formData.appointmentTime}
-                  onChange={handleChange}
-                  placeholder="Chọn giờ"
-                  required
-                  options={[
-                    { value: '08:00', label: '8:00 - 9:00' },
-                    { value: '09:00', label: '9:00 - 10:00' },
-                    { value: '10:00', label: '10:00 - 11:00' },
-                    { value: '14:00', label: '14:00 - 15:00' },
-                    { value: '15:00', label: '15:00 - 16:00' },
-                  ]}
-                />
+                {/* Giờ khám - Hiển thị slot thời gian */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Giờ khám
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableTimeSlots.length > 0 ? (
+                      availableTimeSlots.map((timeSlot, index) => (
+                        <div 
+                          key={index}
+                          onClick={() => handleTimeSlotClick(timeSlot)}
+                          className={`py-2 px-3 border rounded-lg text-sm font-medium text-center cursor-pointer transition duration-150 ${
+                            selectedTimeSlot === timeSlot
+                              ? 'border-blue-500 bg-blue-500 text-white shadow-md'
+                              : 'border-blue-400 bg-blue-50 text-blue-800 hover:bg-blue-100'
+                          }`}
+                        >
+                          {timeSlot}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 py-2 px-3 border border-gray-300 bg-gray-100 text-gray-500 rounded-lg text-sm text-center">
+                        Không có lịch khám cho ngày này
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -138,8 +521,8 @@ const Booking = () => {
                       <input
                         type="radio"
                         name="gender"
-                        value="male"
-                        checked={formData.gender === 'male'}
+                        value="MALE"
+                        checked={formData.gender === 'MALE'}
                         onChange={handleChange}
                         className="w-4 h-4 accent-blue-600"
                       />
@@ -149,8 +532,8 @@ const Booking = () => {
                       <input
                         type="radio"
                         name="gender"
-                        value="female"
-                        checked={formData.gender === 'female'}
+                        value="FEMALE"
+                        checked={formData.gender === 'FEMALE'}
                         onChange={handleChange}
                         className="w-4 h-4 accent-blue-600"
                       />
@@ -186,7 +569,7 @@ const Booking = () => {
                 {/* Date of Birth */}
                 <FormField
                   icon={Calendar}
-                  label="Ngày tháng năm sinh (dd/mm/yyyy)"
+                  label="Ngày tháng năm sinh"
                   type="date"
                   name="dateOfBirth"
                   value={formData.dateOfBirth}
@@ -194,38 +577,39 @@ const Booking = () => {
                   required
                 />
 
+                {/* Insurance Number */}
+                <FormField
+                  icon={CreditCard}
+                  label="Số bảo hiểm y tế (nếu có)"
+                  type="text"
+                  name="insuranceNum"
+                  value={formData.insuranceNum}
+                  onChange={handleChange}
+                  placeholder="Nhập số bảo hiểm y tế"
+                />
+
                 {/* City */}
                 <FormField
                   icon={MapPin}
-                  label="Chọn tỉnh thành"
-                  as="select"
+                  label="Tỉnh thành"
+                  type="text"
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
-                  placeholder="Chọn tỉnh thành"
+                  placeholder="Tỉnh thành"
                   required
-                  options={[
-                    { value: 'hcm', label: 'TP. Hồ Chí Minh' },
-                    { value: 'hanoi', label: 'Hà Nội' },
-                    { value: 'danang', label: 'Đà Nẵng' },
-                  ]}
                 />
 
                 {/* District */}
                 <FormField
                   icon={MapPin}
-                  label="Chọn Quận/Huyện"
-                  as="select"
+                  label="Quận/Huyện"
+                  type="text"
                   name="district"
                   value={formData.district}
                   onChange={handleChange}
-                  placeholder="Chọn quận/huyện"
+                  placeholder="Quận/Huyện"
                   required
-                  options={[
-                    { value: 'q1', label: 'Quận 1' },
-                    { value: 'q2', label: 'Quận 2' },
-                    { value: 'q3', label: 'Quận 3' },
-                  ]}
                 />
 
                 {/* Address */}
@@ -252,37 +636,41 @@ const Booking = () => {
                   rows={4}
                 />
 
-                {/* Payment Method */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <CreditCard size={20} className="text-gray-700" />
+                {/* Selected Time Display */}
+                {selectedTimeSlot && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <Clock size={18} />
+                      <span className="font-semibold">Đã chọn:</span>
+                      <span>{selectedDate} lúc {selectedTimeSlot}</span>
                     </div>
-                    <label className="text-gray-800 font-medium">
-                      Thanh toán tại cơ sở y tế
-                    </label>
                   </div>
-                </div>
+                )}
 
                 {/* Price Summary */}
                 <div className="bg-blue-600 text-white rounded-lg p-6 mb-6">
                   <div className="flex justify-between items-center mb-3">
                     <span className="text-lg">Giá khám:</span>
                     <span className="text-2xl font-bold">
-                      {pricePerVisit.toLocaleString('vi-VN')} đ
+                      {doctorInfo.price.toLocaleString('vi-VN')} đ
                     </span>
                   </div>
                   <div className="border-t border-blue-400 pt-3 flex justify-between items-center">
                     <span className="text-lg">Tổng cộng:</span>
                     <span className="text-3xl font-bold text-yellow-300">
-                      {total.toLocaleString('vi-VN')} đ
+                      {doctorInfo.price.toLocaleString('vi-VN')} đ
                     </span>
                   </div>
                 </div>
 
                 {/* Submit Button */}
-                <Button type="submit" variant="primary" fullWidth onClick={()=> navigate('/bookingsuccess')}>
-                  Đặt lịch ngay
+                <Button 
+                  type="submit" 
+                  variant="primary" 
+                  fullWidth
+                  disabled={!selectedTimeSlot || submitting}
+                >
+                  {submitting ? 'Đang xử lý...' : selectedTimeSlot ? 'Đặt lịch ngay' : 'Vui lòng chọn giờ khám'}
                 </Button>
               </form>
             </div>

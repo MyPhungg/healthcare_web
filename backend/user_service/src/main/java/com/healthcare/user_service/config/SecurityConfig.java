@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/reports/**").permitAll()
                         .requestMatchers("/api/patients/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
                         .anyRequest().authenticated()
                 )

@@ -44,7 +44,8 @@ public class AppointmentService {
                                          Time appointmentStart,
                                          Time appointmentEnd,
                                          String interactedBy,
-                                         String reason) {
+                                         String reason,
+                                         String token) {
         // Sau này nếu cần xác thực thì chỉ thêm logic vào đây
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
@@ -94,7 +95,7 @@ public class AppointmentService {
 
         );
 
-        kafkaProducerService.sendNotification(event);
+        kafkaProducerService.sendNotification(event, token);
         log.info("📤 Đã gửi Kafka event ở appointment service");
         System.out.println("📤 Đã gửi Kafka event ở appointment service: " + event);
         return app;
@@ -110,7 +111,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment cancelAppointment(String appId){
+    public Appointment cancelAppointment(String appId, String token){
         Appointment oldApp = appointmentRepository.findById(appId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn muốn cancel"));
         oldApp.setStatus(AppointmentStatus.CANCELLED);
@@ -130,7 +131,7 @@ public class AppointmentService {
 
         );
 
-        kafkaProducerService.sendNotification(event);
+        kafkaProducerService.sendNotification(event, token);
         log.info("📤 Đã gửi Kafka event ở appointment service");
         System.out.println("📤 Đã gửi Kafka event ở appointment service: " + event);
         return oldApp;

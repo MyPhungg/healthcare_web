@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/reports/**").permitAll()
                         .requestMatchers("/api/patients/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
                         .requestMatchers("/api/users/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
                         .requestMatchers("/api/speciality/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")

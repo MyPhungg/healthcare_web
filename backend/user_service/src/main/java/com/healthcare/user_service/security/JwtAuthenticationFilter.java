@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         // Bỏ qua các endpoint login/public
-        if (path.startsWith("/api/auth/")) {
+        if (path.startsWith("/api/auth/") || path.startsWith("/api/reports")) {
             logger.info("JWT Filter: bypass /api/auth/**");
             filterChain.doFilter(request, response);
             return;

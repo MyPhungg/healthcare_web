@@ -5,6 +5,7 @@ import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
 import com.healthcare.appointment_service.service.AppointmentService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +21,12 @@ import java.util.List;
 public class AppointmentController {
     private final AppointmentService appointmentService;
 
-    @PreAuthorize("hasAnyAuthority('ADMIN','DOCTOR', 'PATIENT')")
+//    @PreAuthorize("hasAnyAuthority('ADMIN','DOCTOR', 'PATIENT')")
     @PostMapping("/create")
-    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request) {
+    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request,
+                                               HttpServletRequest req) {
         try {
+            String token = req.getHeader("Authorization");
             appointmentService.createAppointment(
                     request.getScheduleId(),
                     request.getPatientId(),
@@ -31,7 +34,8 @@ public class AppointmentController {
                     request.getAppointmentStart(),
                     request.getAppointmentEnd(),
                     request.getInteractedBy(),
-                    request.getReason()
+                    request.getReason(),
+                    token
             );
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
@@ -40,9 +44,10 @@ public class AppointmentController {
     }
 
     @PutMapping("/cancel")
-    public ResponseEntity<?> cancelledAppointment(@RequestParam String appId){
+    public ResponseEntity<?> cancelledAppointment(@RequestParam String appId, HttpServletRequest req){
         try{
-            appointmentService.cancelAppointment(appId);
+            String token = req.getHeader("Authorization");
+            appointmentService.cancelAppointment(appId, token);
             return ResponseEntity.ok("Hủy lịch thành công");
         }
         catch (RuntimeException e){

@@ -9,6 +9,9 @@ import com.healthcare.notification_service.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
@@ -24,22 +27,29 @@ public class NotificationService {
     private final EmailService emailService;
     private final AppointmentClient appointmentClient;
     @KafkaListener(topics = "appointment-notifications", groupId = "notification-group", containerFactory = "appointmentEventListenerFactory")
-    public void consumerNotification(NotificationEvent event){
+    public void consumerNotification(ConsumerRecord<String, NotificationEvent> record) {
+
+        NotificationEvent event = record.value();
+        String token = extractTokenFromHeaders(record.headers());
+
+        log.info("📨 Nhận event: {}", event);
+        log.info("🔑 Token nhận được: {}", token);
+
         try {
-            log.info("📨 Nhận được event từ Kafka");
-            log.info("📨 step1");
-            // Step 1: Save notification to database with PENDING status
             Notification notification = saveNotificationToDatabase(event);
-            log.info("📨 step2");
-
-            // Step 2: Process and send the notification
-            processAndSendNotification(notification, event);
-
+            processAndSendNotification(notification, event, token); // Truyền token xuống
         } catch (Exception e) {
-            log.error("Error processing notification: {}", e.getMessage(), e);
-            // Save as FAILED if we can't even save to database
+            log.error("Error processing notification", e);
             saveFailedNotification(event, e.getMessage());
         }
+    }
+
+    private String extractTokenFromHeaders(Headers headers) {
+        Header authHeader = headers.lastHeader("Authorization");
+        if (authHeader != null) {
+            return new String(authHeader.value());
+        }
+        throw new RuntimeException("Không tìm thấy token trong Kafka message");
     }
 
     private Notification saveNotificationToDatabase(NotificationEvent event) {
@@ -63,14 +73,14 @@ public class NotificationService {
         return notificationRepository.save(notification);
     }
 
-    private void processAndSendNotification(Notification notification, NotificationEvent event) {
+    private void processAndSendNotification(Notification notification, NotificationEvent event, String token) {
         try {
             // Update status to PROCESSING
             notification.setDeliveryStatus(Notification.DeliveryStatus.PROCESSING);
             notificationRepository.save(notification);
 
             // Send the actual notification based on type
-            boolean sentSuccessfully = sendActualNotification(notification, event);
+            boolean sentSuccessfully = sendActualNotification(notification, event, token);
 
             // Update status based on result
             if (sentSuccessfully) {
@@ -94,14 +104,13 @@ public class NotificationService {
         }
 
     }
-    private boolean sendActualNotification(Notification notification, NotificationEvent event) {
+    private boolean sendActualNotification(Notification notification, NotificationEvent event, String token) {
         try {
             // Implement your actual notification logic here
             switch (notification.getType()) {
                 case "APPOINTMENT_CREATED":
-                case "APPOINTMENT_UPDATED":
                 case "APPOINTMENT_CANCELLED":
-                    return sendAppointmentNotification(notification, event);
+                    return sendAppointmentNotification(notification, event, token);
                 case "SYSTEM_ALERT":
                     return sendSystemNotification(notification);
                 default:
@@ -113,7 +122,7 @@ public class NotificationService {
             return false;
         }
     }
-    private boolean sendAppointmentNotification(Notification notification, NotificationEvent event) {
+    private boolean sendAppointmentNotification(Notification notification, NotificationEvent event, String token) {
         // Example: Send email notification
         try {
             String regex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
@@ -121,7 +130,7 @@ public class NotificationService {
                 log.warn("Không tìm thấy email người dùng: {}", notification.getUserId());
                 throw new RuntimeException("Không tìm thấy email của người dùng {}");
             }
-            AppointmentInfo info = appointmentClient.getAppointmentInfo(event.getAppointmentId()); //, event.getToken()
+            AppointmentInfo info = appointmentClient.getAppointmentInfo(event.getAppointmentId(), token); //, event.getToken()
 
             if(event.getType().equals("APPOINTMENT_CREATED")){
 // Tạo nội dung email

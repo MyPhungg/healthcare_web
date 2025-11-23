@@ -27,7 +27,7 @@ public class AppointmentController {
                                                HttpServletRequest req) {
         try {
             String token = req.getHeader("Authorization");
-            appointmentService.createAppointment(
+            Appointment newApp = appointmentService.createAppointment(
                     request.getScheduleId(),
                     request.getPatientId(),
                     request.getAppointmentDate(),
@@ -37,7 +37,7 @@ public class AppointmentController {
                     request.getReason(),
                     token
             );
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(newApp);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -47,7 +47,7 @@ public class AppointmentController {
     public ResponseEntity<?> cancelledAppointment(@RequestParam String appId, HttpServletRequest req){
         try{
             String token = req.getHeader("Authorization");
-            appointmentService.cancelAppointment(appId, token);
+            Appointment app = appointmentService.cancelAppointment(appId, token);
             return ResponseEntity.ok("Hủy lịch thành công");
         }
         catch (RuntimeException e){

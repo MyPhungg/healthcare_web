@@ -195,13 +195,12 @@ const Home = () => {
                 <p className="text-gray-500">Chưa có bác sĩ nào trong hệ thống.</p>
               </div>
             ) : (
-              <div className="bg-blue-50 py-10 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
+              <div className="relative">
+                <div className="flex overflow-x-auto gap-6 pb-4 px-4 scrollbar-hide">
                   {doctors.map(doctor => (
-                    <DoctorCard 
-                      key={doctor.id || doctor.doctorId} 
-                      doctor={doctor} 
-                    />
+                    <div key={doctor.id || doctor.doctorId} className="flex-shrink-0 w-64">
+                      <DoctorCard doctor={doctor} />
+                    </div>
                   ))}
                 </div>
               </div>

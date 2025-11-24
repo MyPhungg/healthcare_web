@@ -6,63 +6,95 @@ import Button from '../../components/common/button';
 const BookingSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const bookingData = location.state?.bookingData;
+  
+  // Nhận dữ liệu từ booking page qua state
+  const bookingData = location.state || {};
 
-//   useEffect(() => {
-//     // Nếu không có dữ liệu booking, chuyển về trang chủ
-//     if (!bookingData) {
-//       navigate('/');
-//     }
-//   }, [bookingData, navigate]);
+  useEffect(() => {
+    // Nếu không có dữ liệu booking, chuyển hướng sau 5 giây
+    if (!bookingData.appointmentId) {
+      const timer = setTimeout(() => {
+        navigate('/home');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [bookingData, navigate]);
+
+  if (!bookingData.appointmentId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="w-20 h-20 bg-gray-300 rounded-full mx-auto mb-6 flex items-center justify-center">
+            <span className="text-2xl">❓</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Không tìm thấy thông tin đặt lịch</h2>
+          <p className="text-gray-600 mb-6">Đang chuyển về trang chủ...</p>
+          <Button
+            variant="primary"
+            onClick={() => navigate('/home')}
+            fullWidth
+          >
+            Về trang chủ ngay
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12 mt-20">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8 mt-30">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+        
         {/* Success Icon */}
         <div className="mb-6 flex justify-center">
-          <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center">
-            <Check size={48} className="text-white" strokeWidth={3} />
+          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center">
+            <Check size={40} className="text-white" strokeWidth={3} />
           </div>
         </div>
 
         {/* Success Message */}
-        <h1 className="text-2xl font-bold text-blue-600 mb-2">
-          Lịch hẹn đã được đặt
-        </h1>
-        <p className="text-xl text-blue-600 mb-8">
-          Cảm ơn vì đã sử dụng dịch vụ.
-        </p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Đặt lịch thành công!
+          </h1>
+          <p className="text-gray-600">
+            Lịch hẹn của bạn đã được ghi nhận.
+          </p>
+        </div>
 
-        {/* Booking Details (Optional) */}
-        {bookingData && (
-          <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
-            <h3 className="font-semibold text-gray-800 mb-3">
-              Thông tin lịch hẹn:
-            </h3>
-            <div className="space-y-2 text-sm text-gray-600">
-              <p>
-                <span className="font-medium">Bác sĩ:</span>{' '}
-                {bookingData.doctorName}
-              </p>
-              <p>
-                <span className="font-medium">Bệnh nhân:</span>{' '}
-                {bookingData.patientName}
-              </p>
-              <p>
-                <span className="font-medium">Ngày khám:</span>{' '}
-                {bookingData.appointmentDate}
-              </p>
-              <p>
-                <span className="font-medium">Giờ khám:</span>{' '}
-                {bookingData.appointmentTime}
-              </p>
-              <p>
-                <span className="font-medium">Số điện thoại:</span>{' '}
-                {bookingData.phone}
-              </p>
+        {/* Basic Booking Info */}
+        <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
+          <h3 className="font-semibold text-gray-800 mb-3">Thông tin lịch hẹn:</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Mã đặt lịch:</span>
+              <span className="font-medium">{bookingData.appointmentId}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Ngày khám:</span>
+              <span className="font-medium">{bookingData.appointmentDate}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Giờ khám:</span>
+              <span className="font-medium">
+                {bookingData.appointmentStart?.substring(0, 5)}
+              </span>
+            </div>
+            {bookingData.doctorName && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Bác sĩ:</span>
+                <span className="font-medium">{bookingData.doctorName}</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Simple Notes */}
+        <div className="bg-yellow-50 rounded-lg p-4 mb-6 text-left">
+          <p className="text-sm text-yellow-800">
+            <strong>Lưu ý:</strong> Vui lòng đến trước 15 phút. Mang theo CMND/CCCD.
+          </p>
+        </div>
 
         {/* Action Buttons */}
         <div className="space-y-3">
@@ -71,7 +103,7 @@ const BookingSuccess = () => {
             fullWidth
             onClick={() => navigate('/profile')}
           >
-            Xem lịch hẹn của tôi
+            Xem lịch hẹn
           </Button>
           <Button
             variant="outline"
@@ -82,10 +114,10 @@ const BookingSuccess = () => {
           </Button>
         </div>
 
-        {/* Additional Info */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-gray-700">
-            Thông tin chi tiết đã được gửi đến email của bạn.
+        {/* Contact Info */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500">
+            Mọi thắc mắc vui lòng liên hệ: 1900-1234
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@ import Button from "../../components/common/button";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Lock, Mail, Phone } from 'lucide-react';
 import { FaFacebook, FaGoogle } from 'react-icons/fa';
+import AuthService from '../../service/authService';
 import '../../index.css';
 
 const Login = () => {
@@ -65,36 +66,42 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            // Gọi API đăng nhập
-            const response = await fetch('http://localhost:8082/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    emailOrPhone: formData.emailOrPhone,
-                    password: formData.password
-                })
+            // Sử dụng AuthService để đăng nhập
+            const result = await AuthService.login({
+                emailOrPhone: formData.emailOrPhone,
+                password: formData.password
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                console.log('Đăng nhập thành công:', data);
-                
-                // Lưu token vào localStorage hoặc context
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-                
-                // Chuyển hướng đến dashboard
-                navigate("/home");
-            } else {
-                console.error('Lỗi đăng nhập:', data);
-                setErrors({ submit: data.message || 'Đăng nhập thất bại' });
+            console.log('Đăng nhập thành công:', result);
+            
+            // Lưu thông tin user và token
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+            localStorage.setItem('userRole', result.user.role);
+             // Kiểm tra nếu là bác sĩ và chưa có profile
+            if (result.user.role === 'DOCTOR') {
+            try {
+                const hasProfile = await AuthService.checkDoctorProfileExists(result.user.userId);
+                if (!hasProfile) {
+                // Chưa có profile, chuyển đến trang đăng ký
+                console.log('Bác sĩ chưa có profile, chuyển đến trang đăng ký');
+                navigate('/doctor-register');
+                return;
+                }
+            } catch (profileError) {
+                console.log('Không thể kiểm tra profile bác sĩ, chuyển đến trang đăng ký');
+                navigate('/doctor-register');
+                return;
             }
+            }
+            // Chuyển hướng theo role
+            const redirectPath = AuthService.getRedirectPathByRole(result.user.role);
+            console.log(`Chuyển hướng đến: ${redirectPath} với role: ${result.user.role}`);
+            navigate(redirectPath);
+            
         } catch (error) {
-            console.error('Lỗi kết nối:', error);
-            setErrors({ submit: 'Lỗi kết nối đến server' });
+            console.error('Lỗi đăng nhập:', error);
+            setErrors({ submit: error.message || 'Đăng nhập thất bại' });
         } finally {
             setIsLoading(false);
         }
@@ -104,10 +111,8 @@ const Login = () => {
         try {
             // Redirect đến OAuth2 provider hoặc mở popup
             if (provider === 'google') {
-                // Google OAuth2 implementation
                 window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_GOOGLE_CLIENT_ID&redirect_uri=http://localhost:3000/auth/callback&response_type=token&scope=email profile`;
             } else if (provider === 'facebook') {
-                // Facebook OAuth2 implementation
                 window.location.href = `https://www.facebook.com/v12.0/dialog/oauth?client_id=YOUR_FACEBOOK_APP_ID&redirect_uri=http://localhost:3000/auth/callback&scope=email`;
             }
         } catch (error) {
@@ -117,7 +122,6 @@ const Login = () => {
     }
 
     const handleForgotPassword = () => {
-        // Điều hướng đến trang quên mật khẩu
         navigate("/forgot-password");
     }
 

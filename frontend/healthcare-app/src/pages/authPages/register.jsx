@@ -3,12 +3,13 @@ import InputComp from "../../components/common/inputComp";
 import Button from "../../components/common/button";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Lock } from 'lucide-react';
+import AuthService from '../../service/authService';
 import '../../index.css';
 
 const Register = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        accountType: 'patient', // patient or doctor
+        accountType: 'PATIENT', // PATIENT, DOCTOR, or ADMIN
         username: '',
         email: '',
         phone: '',
@@ -20,7 +21,6 @@ const Register = () => {
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
 
-    // Xử lý thay đổi input - ĐÃ SỬA: ĐÓNG HÀM ĐÚNG CHỖ
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
@@ -35,9 +35,8 @@ const Register = () => {
                 [name]: ''
             }));
         }
-    }; // <- THÊM DẤU ĐÓNG HÀM Ở ĐÂY
+    };
 
-    // Xử lý thay đổi loại tài khoản
     const handleAccountTypeChange = (type) => {
         setFormData(prev => ({
             ...prev,
@@ -98,33 +97,22 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            // Gọi API đăng ký tài khoản
-            const response = await fetch('http://localhost:8082/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username: formData.username,
-                    email: formData.email,
-                    phone: formData.phone,
-                    password: formData.password,
-                    role: formData.accountType.toUpperCase() // SỬA: 'role' thay vì 'accountType'
-                })
+            // Sử dụng AuthService để đăng ký
+            const result = await AuthService.register({
+                username: formData.username,
+                email: formData.email,
+                phone: formData.phone,
+                password: formData.password,
+                role: formData.accountType
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                console.log('Đăng ký thành công:', data);
-                alert('Đăng ký thành công! Vui lòng đăng nhập.');
-                navigate('/login');
-            } else {
-                console.error('Lỗi đăng ký:', data);
-                setErrors({ submit: data.message || 'Đăng ký thất bại. Vui lòng thử lại sau.' });
-            }
+            console.log('Đăng ký thành công:', result);
+            alert('Đăng ký thành công! Vui lòng đăng nhập.');
+            navigate('/login');
+            
         } catch (error) {
-            setErrors({ submit: 'Lỗi kết nối đến server' });
+            console.error('Lỗi đăng ký:', error);
+            setErrors({ submit: error.message || 'Đăng ký thất bại. Vui lòng thử lại sau.' });
         } finally {
             setIsLoading(false);
         }
@@ -139,7 +127,7 @@ const Register = () => {
                     {/* Tùy chọn 1: Bệnh nhân */}
                     <div className="flex items-center space-x-2">
                         <input 
-                            type="radio" // SỬA: radio thay vì checkbox
+                            type="radio"
                             name="accountType"
                             value="PATIENT" 
                             id="patient" 
@@ -152,7 +140,7 @@ const Register = () => {
                     {/* Tùy chọn 2: Bác sĩ */}
                     <div className="flex items-center space-x-2">
                         <input 
-                            type="radio" // SỬA: radio thay vì checkbox
+                            type="radio"
                             name="accountType"
                             value="DOCTOR" 
                             id="doctor" 
@@ -160,6 +148,19 @@ const Register = () => {
                             onChange={() => handleAccountTypeChange('DOCTOR')} 
                         />
                         <label htmlFor="doctor" className="text-gray-700">Tôi là bác sĩ</label>
+                    </div>
+
+                    {/* Tùy chọn 3: Admin */}
+                    <div className="flex items-center space-x-2">
+                        <input 
+                            type="radio"
+                            name="accountType"
+                            value="ADMIN" 
+                            id="admin" 
+                            checked={formData.accountType === 'ADMIN'} 
+                            onChange={() => handleAccountTypeChange('ADMIN')} 
+                        />
+                        <label htmlFor="admin" className="text-gray-700">Quản trị viên</label>
                     </div>
                 </div>
 
@@ -236,7 +237,7 @@ const Register = () => {
 
                 <div className="text-center">
                     <span className="text-gray-600">Đã có tài khoản? </span>
-                    <Link to="/" className="text-blue-600 font-semibold hover:underline">
+                    <Link to="/login" className="text-blue-600 font-semibold hover:underline">
                         Đăng nhập ngay.
                     </Link>
                 </div>

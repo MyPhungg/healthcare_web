@@ -1,20 +1,182 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Download, Edit2, FileText } from 'lucide-react';
 import Button from '../../components/common/button';
+import PatientService from '../../service/patientService';
+import AppointmentService from '../../service/appointmentService';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('info');
+  const [userInfo, setUserInfo] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const userInfo = {
-    name: 'Mỹ nữ gạch ống',
-    phone: '0909350908',
-    email: 'caiqqgido123cl@gmail.com',
-    dateOfBirth: '15/03/1990',
-    gender: 'Nữ',
-    address: '123 Đường ABC, Quận 1',
-    city: 'TP. Hồ Chí Minh',
-    avatar: null
+  // Lấy userId từ token
+  const getUserIdFromToken = () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId || payload.sub;
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
   };
+
+  // Lấy thông tin patient bằng userId
+  const fetchPatientInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userId = getUserIdFromToken();
+      
+      if (!token || !userId) {
+        throw new Error('No authentication token found');
+      }
+
+      const patientData = await PatientService.getPatientByUserId(userId, token);
+      console.log('Patient data:', patientData);
+      
+      // Format data để hiển thị
+      setUserInfo({
+        patientId: patientData.patientId,
+        name: patientData.fullName || 'Chưa có tên',
+        phone: patientData.user?.phone || 'Chưa có số điện thoại',
+        email: patientData.user?.email || 'Chưa có email',
+        dateOfBirth: patientData.dateOfBirth || 'Chưa có ngày sinh',
+        gender: patientData.gender === 'MALE' ? 'Nam' : patientData.gender === 'FEMALE' ? 'Nữ' : 'Chưa có',
+        address: patientData.address || 'Chưa có địa chỉ',
+        district: patientData.district || 'Chưa có quận/huyện',
+        city: patientData.city || 'Chưa có thành phố',
+        insuranceNum: patientData.insuranceNum || 'Chưa có số BHYT',
+        avatar: patientData.profileImg || null
+      });
+
+      return patientData.patientId; // Trả về patientId để fetch appointments
+
+    } catch (err) {
+      console.error('Error fetching patient info:', err);
+      setError(err.message);
+      return null;
+    }
+  };
+
+  // Lấy lịch hẹn của patient
+  const fetchAppointments = async (patientId) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const appointmentsData = await AppointmentService.getAppointmentsByPatient(patientId, token);
+      console.log('Appointments data:', appointmentsData);
+      
+      // Format appointments data
+      const formattedAppointments = appointmentsData.map(appointment => ({
+        id: appointment.appointmentId,
+        doctorName: appointment.doctorName || 'Đang cập nhật',
+        time: `${appointment.appointmentStart?.substring(0, 5) || ''} - ${appointment.appointmentEnd?.substring(0, 5) || ''}`,
+        price: appointment.consultationFee ? `${appointment.consultationFee.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ',
+        bookingDate: new Date(appointment.interactedAt).toLocaleDateString('vi-VN'),
+        appointmentDate: appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString('vi-VN') : 'Chưa có',
+        status: appointment.status?.toLowerCase() || 'pending',
+        reason: appointment.reason || 'Không có lý do'
+      }));
+
+      setAppointments(formattedAppointments);
+
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setAppointments([]); // Set empty array nếu có lỗi
+    }
+  };
+
+  // Fetch data khi component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const patientId = await fetchPatientInfo();
+        if (patientId) {
+          await fetchAppointments(patientId);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Cập nhật thông tin patient
+  const updatePatientInfo = async (updatedData) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token || !userInfo?.patientId) {
+        throw new Error('No authentication token found or patient ID missing');
+      }
+
+      // Chuẩn bị data để gửi lên API
+      const patientUpdateData = {
+        fullName: updatedData.name,
+        gender: updatedData.gender === 'Nam' ? 'MALE' : updatedData.gender === 'Nữ' ? 'FEMALE' : 'OTHER',
+        dateOfBirth: updatedData.dateOfBirth,
+        address: updatedData.address,
+        district: updatedData.district,
+        city: updatedData.city,
+        insuranceNum: updatedData.insuranceNum,
+        profileImg: updatedData.avatar,
+        coverImg: null
+      };
+
+      const result = await PatientService.updatePatient(userInfo.patientId, patientUpdateData, token);
+      console.log('Update successful:', result);
+      
+      // Cập nhật lại thông tin local
+      setUserInfo(prev => ({
+        ...prev,
+        ...updatedData
+      }));
+      
+      return result;
+
+    } catch (err) {
+      console.error('Error updating patient info:', err);
+      throw err;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 mt-30 flex items-center justify-center">
+        <div className="text-lg">Đang tải thông tin...</div>
+      </div>
+    );
+  }
+
+  if (error && !userInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 mt-30 flex items-center justify-center">
+        <div className="text-red-500 text-lg text-center">
+          {error}
+          <br />
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="primary" 
+            className="mt-4"
+          >
+            Thử lại
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 mt-30">
@@ -25,7 +187,7 @@ const Profile = () => {
             {/* Avatar */}
             <div className="relative">
               <div className="w-40 h-40 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/50 shadow-2xl">
-                {userInfo.avatar ? (
+                {userInfo?.avatar ? (
                   <img 
                     src={userInfo.avatar} 
                     alt="Avatar" 
@@ -39,12 +201,12 @@ const Profile = () => {
 
             {/* User Info */}
             <div className="flex-1 text-center md:text-left text-white">
-              <h1 className="text-4xl font-bold mb-3">{userInfo.name}</h1>
+              <h1 className="text-4xl font-bold mb-3">{userInfo?.name || 'Chưa có tên'}</h1>
               <p className="text-lg mb-1">
-                <span className="font-medium">SĐT:</span> {userInfo.phone}
+                <span className="font-medium">SĐT:</span> {userInfo?.phone || 'Chưa có số điện thoại'}
               </p>
               <p className="text-lg">
-                <span className="font-medium">E-mail:</span> {userInfo.email}
+                <span className="font-medium">E-mail:</span> {userInfo?.email || 'Chưa có email'}
               </p>
             </div>
 
@@ -90,9 +252,12 @@ const Profile = () => {
           <div className="flex-1">
             <div className="bg-white rounded-lg shadow-md p-6">
               {activeTab === 'info' ? (
-                <PersonalInfo userInfo={userInfo} />
+                <PersonalInfo 
+                  userInfo={userInfo} 
+                  onUpdatePatient={updatePatientInfo}
+                />
               ) : (
-                <AppointmentHistory />
+                <AppointmentHistory appointments={appointments} />
               )}
             </div>
           </div>
@@ -103,9 +268,14 @@ const Profile = () => {
 };
 
 // Personal Info Component
-const PersonalInfo = ({ userInfo }) => {
+const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(userInfo);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFormData(userInfo);
+  }, [userInfo]);
 
   const handleChange = (e) => {
     setFormData({
@@ -114,8 +284,22 @@ const PersonalInfo = ({ userInfo }) => {
     });
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await onUpdatePatient(formData);
+      setIsEditing(false);
+      // Có thể thêm thông báo thành công ở đây
+      alert('Cập nhật thông tin thành công!');
+    } catch (error) {
+      alert('Có lỗi xảy ra khi cập nhật thông tin: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData(userInfo);
     setIsEditing(false);
   };
 
@@ -130,11 +314,11 @@ const PersonalInfo = ({ userInfo }) => {
           </Button>
         ) : (
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
+            <Button variant="outline" onClick={handleCancel}>
               Hủy
             </Button>
-            <Button variant="primary" onClick={handleSave}>
-              Lưu thay đổi
+            <Button variant="primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
           </div>
         )}
@@ -144,7 +328,7 @@ const PersonalInfo = ({ userInfo }) => {
         <InfoField
           icon={User}
           label="Họ và tên"
-          value={formData.name}
+          value={formData?.name || ''}
           name="name"
           isEditing={isEditing}
           onChange={handleChange}
@@ -152,7 +336,7 @@ const PersonalInfo = ({ userInfo }) => {
         <InfoField
           icon={Phone}
           label="Số điện thoại"
-          value={formData.phone}
+          value={formData?.phone || ''}
           name="phone"
           isEditing={isEditing}
           onChange={handleChange}
@@ -160,7 +344,7 @@ const PersonalInfo = ({ userInfo }) => {
         <InfoField
           icon={Mail}
           label="Email"
-          value={formData.email}
+          value={formData?.email || ''}
           name="email"
           type="email"
           isEditing={isEditing}
@@ -169,24 +353,38 @@ const PersonalInfo = ({ userInfo }) => {
         <InfoField
           icon={Calendar}
           label="Ngày sinh"
-          value={formData.dateOfBirth}
+          value={formData?.dateOfBirth || ''}
           name="dateOfBirth"
+          type="date"
           isEditing={isEditing}
           onChange={handleChange}
         />
         <InfoField
           icon={User}
           label="Giới tính"
-          value={formData.gender}
+          value={formData?.gender || ''}
           name="gender"
+          isEditing={isEditing}
+          onChange={handleChange}
+          as="select"
+          options={[
+            { value: 'Nam', label: 'Nam' },
+            { value: 'Nữ', label: 'Nữ' }
+          ]}
+        />
+        <InfoField
+          icon={MapPin}
+          label="Thành phố"
+          value={formData?.city || ''}
+          name="city"
           isEditing={isEditing}
           onChange={handleChange}
         />
         <InfoField
           icon={MapPin}
-          label="Thành phố"
-          value={formData.city}
-          name="city"
+          label="Quận/Huyện"
+          value={formData?.district || ''}
+          name="district"
           isEditing={isEditing}
           onChange={handleChange}
         />
@@ -194,8 +392,18 @@ const PersonalInfo = ({ userInfo }) => {
           <InfoField
             icon={MapPin}
             label="Địa chỉ"
-            value={formData.address}
+            value={formData?.address || ''}
             name="address"
+            isEditing={isEditing}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <InfoField
+            icon={FileText}
+            label="Số BHYT"
+            value={formData?.insuranceNum || ''}
+            name="insuranceNum"
             isEditing={isEditing}
             onChange={handleChange}
           />
@@ -205,7 +413,17 @@ const PersonalInfo = ({ userInfo }) => {
   );
 };
 
-const InfoField = ({ icon: Icon, label, value, name, type = 'text', isEditing, onChange }) => {
+const InfoField = ({ 
+  icon: Icon, 
+  label, 
+  value, 
+  name, 
+  type = 'text', 
+  isEditing, 
+  onChange,
+  as = 'input',
+  options = []
+}) => {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -213,16 +431,31 @@ const InfoField = ({ icon: Icon, label, value, name, type = 'text', isEditing, o
         <label className="text-sm font-semibold text-gray-600">{label}</label>
       </div>
       {isEditing ? (
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors bg-white"
-        />
+        as === 'select' ? (
+          <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors bg-white"
+          >
+            {options.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={type}
+            name={name}
+            value={value}
+            onChange={onChange}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors bg-white"
+          />
+        )
       ) : (
         <div className="px-4 py-3 bg-gray-50 rounded-lg">
-          <p className="text-gray-800 font-medium">{value}</p>
+          <p className="text-gray-800 font-medium">{value || 'Chưa có thông tin'}</p>
         </div>
       )}
     </div>
@@ -230,57 +463,21 @@ const InfoField = ({ icon: Icon, label, value, name, type = 'text', isEditing, o
 };
 
 // Appointment History Component
-const AppointmentHistory = () => {
-  const appointments = [
-    {
-      id: 'BS0000012',
-      doctorName: 'LGBT',
-      time: '9:00 - 9:30 AM',
-      price: '300,000 VNĐ',
-      bookingDate: '20/11/2025',
-      appointmentDate: '18/01/2025',
-      status: 'pending',
-      reason: 'Tầm soát'
-    },
-    {
-      id: 'BS0000013',
-      doctorName: 'TS.BS Nguyễn Văn A',
-      time: '14:00 - 14:30 PM',
-      price: '500,000 VNĐ',
-      bookingDate: '15/11/2025',
-      appointmentDate: '20/11/2025',
-      status: 'confirmed',
-      reason: 'Khám tổng quát'
-    },
-    {
-      id: 'BS0000011',
-      doctorName: 'BS. Trần Thị B',
-      time: '10:00 - 10:30 AM',
-      price: '400,000 VNĐ',
-      bookingDate: '10/10/2025',
-      appointmentDate: '15/10/2025',
-      status: 'completed',
-      reason: 'Tái khám'
-    }
-  ];
-
+const AppointmentHistory = ({ appointments }) => {
   const getStatusBadge = (status) => {
     const config = {
-      pending: { label: 'Pending', bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
-      confirmed: { label: 'Confirmed', bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
-      cancelled: { label: 'Cancelled', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
-      completed: { label: 'Completed', bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' }
+      pending: { label: 'Chờ xác nhận', bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
+      confirmed: { label: 'Đã xác nhận', bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
+      cancelled: { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
+      completed: { label: 'Đã hoàn thành', bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' }
     };
 
     const { label, bg, text, border } = config[status] || config.pending;
 
     return (
-      <select className={`px-3 py-1.5 rounded border-2 font-medium text-sm ${bg} ${text} ${border} cursor-pointer`}>
-        <option value={status}>{label}</option>
-        <option value="confirmed">Confirmed</option>
-        <option value="cancelled">Cancelled</option>
-        <option value="completed">Completed</option>
-      </select>
+      <span className={`px-3 py-1.5 rounded border-2 font-medium text-sm ${bg} ${text} ${border}`}>
+        {label}
+      </span>
     );
   };
 
@@ -295,7 +492,7 @@ const AppointmentHistory = () => {
         <table className="w-full">
           <thead>
             <tr className="bg-blue-600 text-white">
-              <th className="px-4 py-3 text-left font-semibold">ID bác sĩ</th>
+              <th className="px-4 py-3 text-left font-semibold">ID lịch hẹn</th>
               <th className="px-4 py-3 text-left font-semibold">Tên bác sĩ</th>
               <th className="px-4 py-3 text-left font-semibold">Giờ khám</th>
               <th className="px-4 py-3 text-left font-semibold">Giá khám</th>

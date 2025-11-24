@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Optional;
 //import com.healthcare.user_service.dto.PatientResponse
 
 @RestController
@@ -37,7 +38,23 @@ public class PatientController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
+    @GetMapping("/by-userId/{userId}")
+    public ResponseEntity<PatientResponse> getPatientByUserId(@PathVariable String userId)
+    {
+        try
+        {
+            Optional<Patient> patient = patientService.getParientByUserId(userId);
+            if (patient.isPresent()) {
+            PatientResponse response = patientService.toResponse(patient.get());
+            return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e)
+        {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 
     @PostMapping("/{userId}")
     public Patient create(@PathVariable String userId, @RequestBody Patient patient) {

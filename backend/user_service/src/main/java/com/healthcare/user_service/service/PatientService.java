@@ -75,6 +75,9 @@ public class PatientService {
                         .build())
                 .build();
     }
+    public Optional<Patient> getParientByUserId (String patientId){
+        return patientRepository.findByUser_UserId(patientId);
+    }
 
 }
 

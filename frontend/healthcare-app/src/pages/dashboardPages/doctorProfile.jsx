@@ -1,27 +1,216 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Award, Briefcase, Edit2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Phone, MapPin, Award, Briefcase, Edit2, Calendar } from 'lucide-react';
 import Button from '../../components/common/button';
+import DoctorService from '../../service/doctorService';
+import AuthService from '../../service/authService';
 
 const DoctorProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [doctorInfo, setDoctorInfo] = useState(null);
   const [formData, setFormData] = useState({
-    name: 'Dr. Nguyễn Văn A',
-    email: 'doctor@hospital.com',
-    phone: '0901234567',
-    specialty: 'Tim mạch',
-    experience: '10 năm',
-    education: 'Đại học Y Hà Nội',
-    address: '123 Đường ABC, Quận 1, TP.HCM'
+    fullName: '',
+    email: '',
+    phone: '',
+    speciality: '',
+    specialityId: '', // THÊM specialityId
+    address: '',
+    bio: '',
+    clinicName: '',
+    clinicDescription: '',
+    dateOfBirth: '',
+    gender: ''
   });
 
+  // Fetch doctor profile on component mount
+  useEffect(() => {
+    const fetchDoctorProfile = async () => {
+      try {
+        setLoading(true);
+        const userId = AuthService.getUserId();
+        const profile = await DoctorService.getDoctorProfile(userId);
+        
+        setDoctorInfo(profile);
+        
+        // Lấy tên chuyên khoa nếu có specialityId
+        let specialityName = 'Chưa cập nhật';
+        if (profile.specialityId) {
+          specialityName = await DoctorService.getSpecialityName(profile.specialityId);
+        }
+
+        // Format date of birth từ yyyy-MM-dd sang dd/MM/yyyy
+        const formatDateOfBirth = (dateString) => {
+          if (!dateString) return '';
+          const date = new Date(dateString);
+          return date.toLocaleDateString('vi-VN');
+        };
+
+        // Format gender
+        const formatGender = (gender) => {
+          const genderMap = {
+            'MALE': 'Nam',
+            'FEMALE': 'Nữ',
+            'OTHER': 'Khác'
+          };
+          return genderMap[gender] || gender;
+        };
+
+        setFormData({
+          fullName: profile.fullName || '',
+          email: AuthService.getCurrentUser()?.email || '',
+          phone: profile.phone || '',
+          speciality: specialityName,
+          specialityId: profile.specialityId || '', // THÊM specialityId
+          address: `${profile.address || ''}, ${profile.district || ''}, ${profile.city || ''}`.replace(/^,\s*/, ''),
+          bio: profile.bio || '',
+          clinicName: profile.clinicName || '',
+          clinicDescription: profile.clinicDescription || '',
+          dateOfBirth: formatDateOfBirth(profile.dateOfBirth),
+          gender: formatGender(profile.gender)
+        });
+
+      } catch (error) {
+        console.error('Error fetching doctor profile:', error);
+        alert('Không thể tải thông tin cá nhân');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctorProfile();
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      // Phân tích địa chỉ thành các phần
+      const addressParts = formData.address.split(', ').filter(part => part.trim() !== '');
+      const address = addressParts[0] || '';
+      const district = addressParts[1] || '';
+      const city = addressParts[2] || '';
+      
+      // Chuẩn bị data để update - BAO GỒM TẤT CẢ FIELD REQUIRED
+      const updateData = {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        bio: formData.bio,
+        clinicName: formData.clinicName,
+        clinicDescription: formData.clinicDescription,
+        address: address,
+        district: district,
+        city: city,
+        specialityId: doctorInfo.specialityId, // QUAN TRỌNG: thêm specialityId
+        gender: doctorInfo.gender, // QUAN TRỌNG: thêm gender
+        dateOfBirth: doctorInfo.dateOfBirth // QUAN TRỌNG: thêm dateOfBirth
+      };
+
+      console.log('Update data before sending:', updateData);
+
+      await DoctorService.updateDoctorProfile(doctorInfo.doctorId, updateData);
+      
+      // Refresh data sau khi update
+      const userId = AuthService.getUserId();
+      const updatedProfile = await DoctorService.getDoctorProfile(userId);
+      setDoctorInfo(updatedProfile);
+      
+      // Cập nhật lại speciality name
+      let specialityName = 'Chưa cập nhật';
+      if (updatedProfile.specialityId) {
+        specialityName = await DoctorService.getSpecialityName(updatedProfile.specialityId);
+      }
+
+      // Cập nhật formData với dữ liệu mới
+      const formatDateOfBirth = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('vi-VN');
+      };
+
+      const formatGender = (gender) => {
+        const genderMap = {
+          'MALE': 'Nam',
+          'FEMALE': 'Nữ',
+          'OTHER': 'Khác'
+        };
+        return genderMap[gender] || gender;
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        fullName: updatedProfile.fullName || '',
+        phone: updatedProfile.phone || '',
+        bio: updatedProfile.bio || '',
+        clinicName: updatedProfile.clinicName || '',
+        clinicDescription: updatedProfile.clinicDescription || '',
+        address: `${updatedProfile.address || ''}, ${updatedProfile.district || ''}, ${updatedProfile.city || ''}`.replace(/^,\s*/, ''),
+        dateOfBirth: formatDateOfBirth(updatedProfile.dateOfBirth),
+        gender: formatGender(updatedProfile.gender),
+        speciality: specialityName,
+        specialityId: updatedProfile.specialityId || ''
+      }));
+      
+      setIsEditing(false);
+      alert('Cập nhật thông tin thành công!');
+      
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert(error.message || 'Cập nhật thất bại');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset form data từ doctorInfo gốc
+    if (doctorInfo) {
+      const formatDateOfBirth = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('vi-VN');
+      };
+
+      const formatGender = (gender) => {
+        const genderMap = {
+          'MALE': 'Nam',
+          'FEMALE': 'Nữ',
+          'OTHER': 'Khác'
+        };
+        return genderMap[gender] || gender;
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        fullName: doctorInfo.fullName || '',
+        phone: doctorInfo.phone || '',
+        bio: doctorInfo.bio || '',
+        clinicName: doctorInfo.clinicName || '',
+        clinicDescription: doctorInfo.clinicDescription || '',
+        address: `${doctorInfo.address || ''}, ${doctorInfo.district || ''}, ${doctorInfo.city || ''}`.replace(/^,\s*/, ''),
+        dateOfBirth: formatDateOfBirth(doctorInfo.dateOfBirth),
+        gender: formatGender(doctorInfo.gender),
+        specialityId: doctorInfo.specialityId || ''
+      }));
+    }
     setIsEditing(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Đang tải thông tin...</div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -34,32 +223,134 @@ const DoctorProfile = () => {
               <User size={48} className="text-blue-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">{formData.name}</h2>
-              <p className="text-gray-600">{formData.specialty}</p>
-              <p className="text-sm text-gray-500">{formData.experience} kinh nghiệm</p>
+              <h2 className="text-2xl font-bold text-gray-800">
+                {formData.fullName || 'Chưa cập nhật'}
+              </h2>
+              <p className="text-gray-600">{formData.speciality}</p>
+              {formData.clinicName && (
+                <p className="text-sm text-blue-600">{formData.clinicName}</p>
+              )}
             </div>
           </div>
           {!isEditing ? (
-            <Button variant="primary" onClick={() => setIsEditing(true)}>
+            <Button 
+              variant="primary" 
+              onClick={() => setIsEditing(true)}
+              disabled={loading}
+            >
               <Edit2 size={18} className="mr-2" />
               Chỉnh sửa
             </Button>
           ) : (
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setIsEditing(false)}>Hủy</Button>
-              <Button variant="primary" onClick={handleSave}>Lưu</Button>
+              <Button variant="outline" onClick={handleCancel}>
+                Hủy
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </Button>
             </div>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <InfoField icon={Mail} label="Email" name="email" value={formData.email} isEditing={isEditing} onChange={handleChange} />
-          <InfoField icon={Phone} label="Số điện thoại" name="phone" value={formData.phone} isEditing={isEditing} onChange={handleChange} />
-          <InfoField icon={Award} label="Chuyên khoa" name="specialty" value={formData.specialty} isEditing={isEditing} onChange={handleChange} />
-          <InfoField icon={Briefcase} label="Kinh nghiệm" name="experience" value={formData.experience} isEditing={isEditing} onChange={handleChange} />
-          <InfoField icon={Award} label="Học vấn" name="education" value={formData.education} isEditing={isEditing} onChange={handleChange} />
+          <InfoField 
+            icon={User} 
+            label="Họ và tên" 
+            name="fullName" 
+            value={formData.fullName} 
+            isEditing={isEditing} 
+            onChange={handleChange} 
+          />
+          <InfoField 
+            icon={Mail} 
+            label="Email" 
+            name="email" 
+            value={formData.email} 
+            isEditing={false}
+            onChange={handleChange} 
+          />
+          <InfoField 
+            icon={Phone} 
+            label="Số điện thoại" 
+            name="phone" 
+            value={formData.phone} 
+            isEditing={isEditing} 
+            onChange={handleChange} 
+          />
+          <InfoField 
+            icon={Award} 
+            label="Chuyên khoa" 
+            name="speciality" 
+            value={formData.speciality} 
+            isEditing={false}
+            onChange={handleChange} 
+          />
+          <InfoField 
+            icon={Calendar} 
+            label="Ngày sinh" 
+            name="dateOfBirth" 
+            value={formData.dateOfBirth} 
+            isEditing={false}
+            onChange={handleChange} 
+          />
+          <InfoField 
+            icon={User} 
+            label="Giới tính" 
+            name="gender" 
+            value={formData.gender} 
+            isEditing={false}
+            onChange={handleChange} 
+          />
           <div className="md:col-span-2">
-            <InfoField icon={MapPin} label="Địa chỉ" name="address" value={formData.address} isEditing={isEditing} onChange={handleChange} />
+            <InfoField 
+              icon={MapPin} 
+              label="Tên phòng khám" 
+              name="clinicName" 
+              value={formData.clinicName} 
+              isEditing={isEditing} 
+              onChange={handleChange} 
+              placeholder="Tên phòng khám"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <InfoField 
+              icon={MapPin} 
+              label="Mô tả phòng khám" 
+              name="clinicDescription" 
+              value={formData.clinicDescription} 
+              isEditing={isEditing} 
+              onChange={handleChange} 
+              isTextArea={true}
+              placeholder="Mô tả về phòng khám..."
+            />
+          </div>
+          <div className="md:col-span-2">
+            <InfoField 
+              icon={MapPin} 
+              label="Địa chỉ" 
+              name="address" 
+              value={formData.address} 
+              isEditing={isEditing} 
+              onChange={handleChange} 
+              placeholder="Địa chỉ đầy đủ"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <InfoField 
+              icon={User} 
+              label="Giới thiệu bản thân" 
+              name="bio" 
+              value={formData.bio} 
+              isEditing={isEditing} 
+              onChange={handleChange} 
+              isTextArea={true}
+              placeholder="Giới thiệu về bản thân và chuyên môn..."
+            />
           </div>
         </div>
       </div>
@@ -67,23 +358,47 @@ const DoctorProfile = () => {
   );
 };
 
-const InfoField = ({ icon: Icon, label, name, value, isEditing, onChange }) => (
+// InfoField component giữ nguyên
+const InfoField = ({ 
+  icon: Icon, 
+  label, 
+  name, 
+  value, 
+  isEditing, 
+  onChange, 
+  placeholder = "",
+  isTextArea = false 
+}) => (
   <div className="space-y-2">
     <div className="flex items-center gap-2">
       <Icon size={18} className="text-blue-600" />
       <label className="text-sm font-semibold text-gray-600">{label}</label>
     </div>
     {isEditing ? (
-      <input
-        type="text"
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-      />
+      isTextArea ? (
+        <textarea
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          rows={4}
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
+        />
+      ) : (
+        <input
+          type="text"
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+        />
+      )
     ) : (
-      <div className="px-4 py-3 bg-gray-50 rounded-lg">
-        <p className="text-gray-800 font-medium">{value}</p>
+      <div className="px-4 py-3 bg-gray-50 rounded-lg min-h-[48px] flex items-center">
+        <p className={`text-gray-800 font-medium ${!value ? 'text-gray-400' : ''}`}>
+          {value || 'Chưa cập nhật'}
+        </p>
       </div>
     )}
   </div>

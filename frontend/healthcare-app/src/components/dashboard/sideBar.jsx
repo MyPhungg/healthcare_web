@@ -22,10 +22,12 @@ const Sidebar = ({ userRole = 'admin' }) => {
   // Fetch doctor information
   useEffect(() => {
     const fetchDoctorInfo = async () => {
-      if (userRole === 'DOCTOR') {
+      if (userRole === "DOCTOR") {
         try {
           const userId = AuthService.getUserId();
+          console.log('Fetching doctor info for userId:', userId);
           const token = AuthService.getToken();
+          console.log('Using token:', token);
           
           if (userId && token) {
             const response = await fetch(`http://localhost:8082/api/doctors/user/${userId}`, {
@@ -82,11 +84,13 @@ const Sidebar = ({ userRole = 'admin' }) => {
 
   // Format doctor name
   const formatDoctorName = (doctorInfo) => {
+    console.log('Doctor Info:', doctorInfo); // Thêm dòng này để debug
+    console.log('Full Name:', doctorInfo?.fullName);
     if (!doctorInfo) return 'Bác sĩ';
     
     // Nếu có fullName, sử dụng fullName
     if (doctorInfo.fullName) {
-      return `Dr. ${doctor.fullName}`;
+      return `Dr. ${doctorInfo.fullName}`;
     }
     
     // Fallback nếu không có fullName

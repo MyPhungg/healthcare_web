@@ -1,5 +1,6 @@
 package com.healthcare.user_service.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -16,9 +17,10 @@ public class Patient {
     @Column(name = "patient_id", length = 50)
     private String patientId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @OneToOne(mappedBy = "patient", fetch = FetchType.LAZY)
+    @JsonBackReference
     private User user;
+
 
     @Column(name = "full_name", length = 100, nullable = false)
     private String fullName;

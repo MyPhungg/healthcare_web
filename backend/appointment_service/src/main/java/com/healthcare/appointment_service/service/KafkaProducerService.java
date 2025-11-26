@@ -24,7 +24,17 @@ public class KafkaProducerService {
             // Thêm header vào Kafka message
             record.headers().add("Authorization", token.getBytes());
 
-            kafkaTemplate.send(record);
+            kafkaTemplate.send(record).toCompletableFuture().thenAccept(result -> {
+                log.info("Gửi message Kafka thành công: {}, partition: {}, offset: {}",
+                        event,
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset());
+            })
+            .exceptionally(ex -> {
+                log.error("Gửi message Kafka thất bại: {}", event, ex);
+                return null;
+            });
+
             log.info("Thông báo gửi thành công: {}", event);
         } catch (Exception e){
             log.error("Gửi thông báo thất bại: {}", e.getMessage(), e);

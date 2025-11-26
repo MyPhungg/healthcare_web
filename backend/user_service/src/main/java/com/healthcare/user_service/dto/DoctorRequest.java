@@ -1,5 +1,6 @@
 package com.healthcare.user_service.dto;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
@@ -20,6 +21,6 @@ public class DoctorRequest {
     private String clinicName;
     private String clinicDescription;
     private String bio;
-    private String profileImg;
-    private String coverImg;
+    private MultipartFile profileImg;
+    private MultipartFile coverImg;
 }

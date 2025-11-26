@@ -17,8 +17,12 @@ public class Patient {
     @Column(name = "patient_id", length = 50)
     private String patientId;
 
+    @Column(name = "user_id", length = 50, nullable = false)
+    private String userId;
+
     @OneToOne(mappedBy = "patient", fetch = FetchType.LAZY)
     @JsonBackReference
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
 

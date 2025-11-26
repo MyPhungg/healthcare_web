@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 import java.util.Optional;
 //import com.healthcare.user_service.dto.PatientResponse
@@ -57,13 +59,49 @@ public class PatientController {
     }
 
     @PostMapping("/{userId}")
-    public Patient create(@PathVariable String userId, @RequestBody Patient patient) {
-        return patientService.createPatient(patient, userId);
+    public Patient create(@PathVariable String userId,
+                          @RequestParam String fullName,
+                          @RequestParam Patient.Gender gender,
+                          @RequestParam String dateOfBirth,
+                          @RequestParam String address,
+                          @RequestParam String district,
+                          @RequestParam String city,
+                          @RequestParam String insuranceNum,
+                          @RequestPart(value = "profileImg", required = false) MultipartFile profileImg,
+                          @RequestPart(value = "coverImg", required = false) MultipartFile coverImg) {
+        return patientService.createPatient(userId,
+                fullName,
+                gender,
+                dateOfBirth,
+                address,
+                district,
+                city,
+                insuranceNum,
+                profileImg,
+                coverImg);
     }
 
-    @PutMapping("/{id}")
-    public Patient update(@PathVariable String id, @RequestBody Patient patient) {
-        return patientService.updatePatient(id, patient);
+    @PutMapping("/{patientId}")
+    public Patient update(@PathVariable String patientId,
+                          @RequestParam String fullName,
+                          @RequestParam Patient.Gender gender,
+                          @RequestParam String dateOfBirth,
+                          @RequestParam String address,
+                          @RequestParam String district,
+                          @RequestParam String city,
+                          @RequestParam String insuranceNum,
+                          @RequestPart(value = "profileImg", required = false) MultipartFile profileImg,
+                          @RequestPart(value = "coverImg", required = false) MultipartFile coverImg) {
+        return patientService.updatePatient(patientId,
+                fullName,
+                gender,
+                dateOfBirth,
+                address,
+                district,
+                city,
+                insuranceNum,
+                profileImg,
+                coverImg);
     }
 
     @DeleteMapping("/{id}")

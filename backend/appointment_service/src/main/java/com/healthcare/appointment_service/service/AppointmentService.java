@@ -101,10 +101,7 @@ public class AppointmentService {
         return app;
     }
 
-    private void validateDoctorExists(String doctorId) {
-        // Hiện tại chưa làm gì
-        // Sau này có thể gọi sang doctor-service để kiểm tra ID
-    }
+
 
     public List<Appointment> getAllAppointment(){
         return appointmentRepository.findAll();
@@ -186,7 +183,13 @@ public class AppointmentService {
         return info;
     }
 
-
+    @Transactional
+    public Appointment changeStatusAppointment(String appId, AppointmentStatus status){
+        Appointment app = appointmentRepository.findById(appId)
+                .orElseThrow( () -> new RuntimeException("Không tìm thấy lịch hẹn!"));
+        app.setStatus(status);
+        return app;
+    }
 
 //    @Transactional
 //    public void deleteAppointment(String id){

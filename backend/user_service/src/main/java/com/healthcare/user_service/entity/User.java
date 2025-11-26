@@ -55,6 +55,7 @@
 //}
 package com.healthcare.user_service.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -123,7 +124,9 @@ public class User {
     public enum AuthProvider {
         LOCAL, GOOGLE, FACEBOOK
     }
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "patient_id")
+    @JsonManagedReference
     private Patient patient;
 
 }

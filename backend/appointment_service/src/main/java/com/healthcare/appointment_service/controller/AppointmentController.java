@@ -1,5 +1,6 @@
 package com.healthcare.appointment_service.controller;
 
+import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.dto.AppointmentInfo;
 import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
@@ -85,6 +86,28 @@ public class AppointmentController {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Không thể lấy thông tin lịch hẹn: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/change")
+    public ResponseEntity<?> changeStatusAppointment(@RequestParam String appId, @RequestParam AppointmentStatus status){
+        try {
+            Appointment app = appointmentService.changeStatusAppointment(appId, status);
+            return ResponseEntity.ok(app);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Không thể đổi trạng thái lịch hẹn: " + e.getMessage());
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllAppointment(){
+        try {
+            List<Appointment> list = appointmentService.getAllAppointment();
+            return ResponseEntity.ok(list);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Không thể lấy danh sách lịch hẹn: " + e.getMessage());
         }
     }
 

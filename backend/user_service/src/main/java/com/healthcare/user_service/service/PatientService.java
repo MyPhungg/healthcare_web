@@ -25,9 +25,9 @@ public class PatientService {
         return patientRepository.findAll();
     }
 
-    public Optional<Patient> getPatientById(String patientId) {
-        return patientRepository.findById(patientId);
-    }
+//    public Optional<Patient> getPatientById(String patientId) {
+//        return patientRepository.findById(patientId);
+//    }
 
     public Patient createPatient(Patient patient, String userId) {
         try {

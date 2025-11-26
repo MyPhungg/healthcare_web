@@ -73,7 +73,7 @@ public class ScheduleController {
     }
 
     @GetMapping("/speciality")
-    public List<ScheduleBySpeciality> getSheduleBySpeciality(String specialityId, LocalDate date) {
+    public List<ScheduleBySpeciality> getSheduleBySpeciality(@RequestParam String specialityId, @RequestParam LocalDate date) {
         try {
             List<ScheduleBySpeciality> list = scheduleService.getSheduleBySpeciality(specialityId, date);
             return list;

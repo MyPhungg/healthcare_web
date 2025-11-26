@@ -28,6 +28,12 @@ COPY --from=builder /app/notification_service/target/*.jar app.jar
 EXPOSE 8084
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
+FROM eclipse-temurin:21-jre-alpine AS chatbot_service_runtime
+WORKDIR /app
+COPY --from=builder /app/chatbot_service/target/*.jar app.jar
+EXPOSE 8084
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
 FROM eclipse-temurin:21-jre-alpine AS eureka_server_runtime
 WORKDIR /app
 COPY --from=builder /app/eureka_server/target/*.jar app.jar

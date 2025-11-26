@@ -22,6 +22,8 @@ import DoctorAppointment from '../pages/dashboardPages/doctorAppointments';
 import DoctorPatient from '../pages/dashboardPages/doctorPatients';
 import AddDoctorSchedule from '../pages/dashboardPages/addDoctorSchedule';
 import AboutUs from '../pages/webPages/aboutus';
+import DoctorDetail from '../pages/webPages/DoctorDetail';
+import DoctorRegister from '../pages/dashboardPages/DoctorRegister';
 
 function AppRoutes() {
   return (
@@ -38,6 +40,8 @@ function AppRoutes() {
           <Route path="/booking" element={<Booking />} />
           <Route path="/bookingsuccess" element={<BookingSuccess/>} />
           <Route path="/profile" element={<Profile/>} />
+          <Route path="/doctordetail/:doctorId" element={<DoctorDetail/>} />
+          <Route path="/doctor-register" element={<DoctorRegister/>} />
           {/* Add more routes as needed */}
         </Route>
                 {/* Admin Dashboard routes */}
@@ -50,6 +54,7 @@ function AppRoutes() {
         </Route>
 
         {/* Doctor Dashboard routes */}
+        
         <Route path="/doctor" element={<DashboardLayout userRole="doctor" />}>
           <Route path="dashboard" element={<DoctorDashboard />} />
           <Route path="profile" element={<DoctorProfile />} />
@@ -57,6 +62,7 @@ function AppRoutes() {
           <Route path="appointments" element={<DoctorAppointment/>} />
           <Route path="patients" element={<DoctorPatient/>} />
           <Route path="add-schedule" element={<AddDoctorSchedule/>} />
+          
         </Route>
 
         

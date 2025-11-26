@@ -3,6 +3,8 @@ import { User, Phone, Mail, Calendar, MapPin, FileText, CreditCard, Clock } from
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import FormField from '../../components/common/formField';
 import Button from '../../components/common/button';
+import BookingService from '../../service/bookingService';
+import PatientService from '../../service/patientService';
 
 const Booking = () => {
   const [searchParams] = useSearchParams();
@@ -68,15 +70,6 @@ const Booking = () => {
     }
     
     return slots;
-  };
-
-  // Calculate end time based on start time and slot duration
-  const calculateEndTime = (startTime, slotDuration = 30) => {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const endTime = new Date();
-    endTime.setHours(hours);
-    endTime.setMinutes(minutes + slotDuration);
-    return endTime.toTimeString().slice(0, 8);
   };
 
   // Get user info from token
@@ -200,6 +193,71 @@ const Booking = () => {
     }
   }, [doctorId, selectedDate, selectedTime]);
 
+  // Get user info and auto-fill form
+  const fetchUserInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const currentUserId = getUserIdFromToken();
+      
+      if (!token || !currentUserId) return;
+
+      // Gọi API để lấy thông tin user
+      const userResponse = await fetch(
+        `http://localhost:8082/api/users/${currentUserId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        console.log('User data:', userData);
+        
+        // Tự động điền email và số điện thoại vào form
+        setFormData(prev => ({
+          ...prev,
+          email: userData.email || '',
+          phone: userData.phone || ''
+        }));
+
+        // Nếu đã có patient, lấy thông tin patient để điền form
+        try {
+          const patientData = await PatientService.getPatientByUserId(currentUserId, token);
+          console.log('Existing patient data:', patientData);
+          
+          // Tự động điền thông tin patient vào form
+          setFormData(prev => ({
+            ...prev,
+            patientName: patientData.fullName || '',
+            gender: patientData.gender || 'FEMALE',
+            dateOfBirth: patientData.dateOfBirth || '',
+            city: patientData.city || '',
+            district: patientData.district || '',
+            address: patientData.address || '',
+            insuranceNum: patientData.insuranceNum || ''
+          }));
+        } catch (patientError) {
+          console.log('No existing patient found, user will fill form manually');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    }
+  };
+
+  // Fetch user info khi component mount
+  useEffect(() => {
+    const fetchUserAndAutoFill = async () => {
+      await fetchUserInfo();
+    };
+    
+    fetchUserAndAutoFill();
+  }, []);
+
   const handleTimeSlotClick = (timeSlot) => {
     setSelectedTimeSlot(timeSlot);
     setFormData(prev => ({
@@ -220,128 +278,37 @@ const Booking = () => {
     });
   };
 
-  // Create patient first, then create appointment
-  // Create patient first, then create appointment
-const createPatientAndAppointment = async () => {
-  const token = localStorage.getItem('token');
-  
-  if (!token || !userId) {
-    throw new Error('Authentication required');
-  }
-
-  try {
-    // Step 1: Create patient
-    const patientData = {
-      fullName: formData.patientName,
-      gender: formData.gender,
-      dateOfBirth: formData.dateOfBirth,
-      address: formData.address,
-      district: formData.district,
-      city: formData.city,
-      insuranceNum: formData.insuranceNum || `BH${Date.now()}`,
-      profileImg: null,
-      coverImg: null
-    };
-
-    console.log('Creating patient:', patientData);
-
-    const patientResponse = await fetch(
-      `http://localhost:8082/api/patients/${userId}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(patientData)
-      }
-    );
-
-    let patientResult;
-    const patientResponseText = await patientResponse.text();
+  // Create booking using BookingService
+  const createBooking = async () => {
+    const token = localStorage.getItem('token');
     
-    if (patientResponseText) {
-      try {
-        patientResult = JSON.parse(patientResponseText);
-      } catch (parseError) {
-        console.warn('Patient response is not JSON:', patientResponseText);
-        patientResult = { success: true }; // Fallback nếu response không phải JSON
-      }
-    } else {
-      patientResult = { success: true }; // Fallback nếu response trống
+    if (!token || !userId) {
+      throw new Error('Authentication required');
     }
 
-    if (!patientResponse.ok) {
-      throw new Error(`Failed to create patient: ${patientResponse.status} - ${patientResponseText}`);
+    try {
+      const result = await BookingService.createBooking(
+        userId, 
+        formData, 
+        scheduleData, 
+        doctorInfo, 
+        token
+      );
+      
+      console.log('Booking process completed:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      throw error;
     }
-
-    console.log('Patient created:', patientResult);
-
-    // Lấy patientId từ response - thử nhiều trường có thể có
-    const patientId = patientResult.patientId || patientResult.id || patientResult.data?.patientId || `pat${Date.now()}`;
-
-    // Step 2: Create appointment
-    const appointmentData = {
-      scheduleId: scheduleData?.scheduleId || 'sch30000001',
-      patientId: patientId,
-      appointmentDate: formData.appointmentDate,
-      appointmentStart: formData.appointmentTime + ':00',
-      appointmentEnd: calculateEndTime(formData.appointmentTime, scheduleData?.slotDuration || 30),
-      interactedBy: userId,
-      reason: formData.reason || 'Khám bệnh theo lịch hẹn'
-    };
-
-    console.log('Creating appointment:', appointmentData);
-
-    const appointmentResponse = await fetch(
-      'http://localhost:8081/appointments/create',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(appointmentData)
-      }
-    );
-
-    let appointmentResult;
-    const appointmentResponseText = await appointmentResponse.text();
-    
-    if (appointmentResponseText) {
-      try {
-        appointmentResult = JSON.parse(appointmentResponseText);
-      } catch (parseError) {
-        console.warn('Appointment response is not JSON:', appointmentResponseText);
-        appointmentResult = { success: true };
-      }
-    } else {
-      appointmentResult = { success: true };
-    }
-
-    if (!appointmentResponse.ok) {
-      throw new Error(`Failed to create appointment: ${appointmentResponse.status} - ${appointmentResponseText}`);
-    }
-
-    console.log('Appointment created:', appointmentResult);
-
-    return {
-      patientId,
-      appointmentId: appointmentResult.appointmentId || appointmentResult.id || appointmentResult.data?.appointmentId || `appt${Date.now()}`,
-      ...appointmentResult
-    };
-
-  } catch (error) {
-    console.error('Error in createPatientAndAppointment:', error);
-    throw error;
-  }
-};
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setSubmitting(true);
       console.log('Submitting booking with data:', formData);
+      
       // Validate required fields
       if (!formData.patientName || !formData.phone || !formData.email || 
           !formData.dateOfBirth || !formData.appointmentDate || !formData.appointmentTime) {
@@ -355,20 +322,24 @@ const createPatientAndAppointment = async () => {
         return;
       }
 
-      // Create patient and appointment
-      const result = await createPatientAndAppointment();
+      // Create booking using service
+      const result = await createBooking();
       
       console.log('Booking process completed:', result);
 
-      // Chuyển đến trang thành công
+      // Chuyển đến trang thành công với đầy đủ dữ liệu
       navigate('/bookingsuccess', { 
-        state: { 
-          bookingId: result.appointmentId,
+        state: {
+          appointmentId: result.appointmentId,
           patientId: result.patientId,
-          doctorName: doctorInfo.name,
-          appointmentDate: formData.appointmentDate,
-          appointmentTime: formData.appointmentTime,
-          totalPrice: doctorInfo.price
+          doctorName: result.doctorName,
+          appointmentDate: result.appointmentDate,
+          appointmentStart: result.appointmentStart,
+          appointmentEnd: result.appointmentEnd,
+          reason: result.reason,
+          status: result.status,
+          totalPrice: result.totalPrice,
+          interactedAt: new Date().toISOString()
         }
       });
 

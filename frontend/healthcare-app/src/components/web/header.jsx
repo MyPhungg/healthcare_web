@@ -110,18 +110,7 @@ return (
               >
                 About us
               </Link>
-              <Link 
-                to="/doctors" 
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
-              >
-                Bác sĩ
-              </Link>
-              <Link 
-                to="/specialties" 
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
-              >
-                Chuyên khoa
-              </Link>
+              
             </div>
 
             {/* Auth Buttons */}

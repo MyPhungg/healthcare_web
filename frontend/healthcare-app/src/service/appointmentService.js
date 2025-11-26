@@ -1,10 +1,128 @@
-// services/appointmentService.js
+import AuthService from './authService';
+
+const API_BASE_URL = 'http://localhost:8081';
 
 class AppointmentService {
-  static async createAppointment(appointmentData, token) {
+  // Lấy tất cả appointments
+  static async getAllAppointments() {
     try {
+      const token = AuthService.getToken();
+      console.log('Fetching all appointments...');
+      
+      const response = await fetch(`${API_BASE_URL}/appointments`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Appointments response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = 'Không thể lấy danh sách lịch hẹn';
+        try {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        } catch (textError) {
+          console.error('Cannot read error text:', textError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Appointments data received:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.warn('Non-JSON response:', text);
+        return [];
+      }
+
+    } catch (error) {
+      console.error('Error in getAllAppointments:', error);
+      throw error;
+    }
+  }
+
+  // Lấy appointments theo doctor
+  static async getAppointmentsByDoctor(doctorId) {
+    try {
+      const token = AuthService.getToken();
+      console.log('Fetching appointments for doctor:', doctorId);
+      
+      const response = await fetch(`${API_BASE_URL}/appointments/by-doctor?doctorId=${doctorId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Appointments response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = 'Không thể lấy danh sách lịch hẹn';
+        try {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        } catch (textError) {
+          console.error('Cannot read error text:', textError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Appointments data received:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.warn('Non-JSON response:', text);
+        return [];
+      }
+
+    } catch (error) {
+      console.error('Error in getAppointmentsByDoctor:', error);
+      throw error;
+    }
+  }
+
+  // Lấy appointments theo patient
+  static async getAppointmentsByPatient(patientId) {
+    try {
+      const token = AuthService.getToken();
       const response = await fetch(
-        'http://localhost:8081/appointments/create',
+        `${API_BASE_URL}/appointments/by-patient?patientId=${patientId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting appointments:', error);
+      throw error;
+    }
+  }
+
+  // Tạo appointment mới
+  static async createAppointment(appointmentData) {
+    try {
+      const token = AuthService.getToken();
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/create`,
         {
           method: 'POST',
           headers: {
@@ -46,104 +164,13 @@ class AppointmentService {
     }
   }
 
-  static async getAppointmentsByPatient(patientId, token) {
-    try {
-      const response = await fetch(
-        `http://localhost:8081/appointments/by-patient?patientId=${patientId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting appointments:', error);
-      throw error;
-    }
-  }
-
-  static async cancelAppointment(appointmentId, token) {
-    try {
-      const response = await fetch(
-        `http://localhost:8081/appointments/${appointmentId}/cancel`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to cancel appointment: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error canceling appointment:', error);
-      throw error;
-    }
-  }
-  // services/appointmentService.js
-
-  static async getAppointmentsBySchedule(scheduleId) {
-    try {
-      const token = localStorage.getItem('token');
-      console.log('Fetching appointments for schedule:', scheduleId);
-      
-      const response = await fetch(`http://localhost:8081/appointments/by-doctor?scheduleId=${scheduleId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Appointments response status:', response.status);
-
-      if (!response.ok) {
-        let errorMessage = 'Không thể lấy danh sách lịch hẹn';
-        try {
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
-        } catch (textError) {
-          console.error('Cannot read error text:', textError);
-        }
-        throw new Error(errorMessage);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        console.log('Appointments data received:', data);
-        return data;
-      } else {
-        const text = await response.text();
-        console.warn('Non-JSON response:', text);
-        return [];
-      }
-
-    } catch (error) {
-      console.error('Error in getAppointmentsBySchedule:', error);
-      throw error;
-    }
-  }
-
+  // Hủy appointment
   static async cancelAppointment(appointmentId) {
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getToken();
       console.log(`Cancelling appointment: ${appointmentId}`);
       
-      const response = await fetch(`http://localhost:8081/appointments/cancel?appId=${appointmentId}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/cancel?appId=${appointmentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -177,15 +204,13 @@ class AppointmentService {
     }
   }
 
+  // Xác nhận appointment
   static async confirmAppointment(appointmentId) {
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getToken();
       console.log(`Confirming appointment: ${appointmentId}`);
       
-      // Since there's no direct confirm endpoint, we might need to create one
-      // For now, we'll use a custom implementation or check if there's another way
-      // This is a placeholder - you'll need to adjust based on your actual API
-      const response = await fetch(`http://localhost:8081/appointments/confirm?appId=${appointmentId}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/confirm?appId=${appointmentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -196,7 +221,6 @@ class AppointmentService {
       console.log('Confirm appointment response status:', response.status);
 
       if (!response.ok) {
-        // If confirm endpoint doesn't exist, we'll handle it gracefully
         if (response.status === 404) {
           console.log('Confirm endpoint not available, appointment status remains PENDING');
           return { success: true, message: 'Lịch hẹn đã được giữ nguyên trạng thái chờ xác nhận' };
@@ -225,13 +249,13 @@ class AppointmentService {
     }
   }
 
+  // Hoàn thành appointment
   static async completeAppointment(appointmentId) {
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getToken();
       console.log(`Completing appointment: ${appointmentId}`);
       
-      // Placeholder for complete appointment endpoint
-      const response = await fetch(`http://localhost:8081/appointments/complete?appId=${appointmentId}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/complete?appId=${appointmentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -242,7 +266,6 @@ class AppointmentService {
       console.log('Complete appointment response status:', response.status);
 
       if (!response.ok) {
-        // If complete endpoint doesn't exist, handle gracefully
         if (response.status === 404) {
           console.log('Complete endpoint not available');
           return { success: true, message: 'Chức năng đánh dấu hoàn thành chưa khả dụng' };
@@ -271,9 +294,10 @@ class AppointmentService {
     }
   }
 
+  // Lấy thông tin patient
   static async getPatientInfo(patientId) {
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getToken();
       const response = await fetch(`http://localhost:8082/api/patients/${patientId}`, {
         method: 'GET',
         headers: {
@@ -292,10 +316,11 @@ class AppointmentService {
     }
   }
 
-  static async getAppointmentInfo(appointmentId) {
+  // Lấy thông tin doctor
+  static async getDoctorInfo(doctorId) {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8081/appointments/info?appointmentId=${appointmentId}`, {
+      const token = AuthService.getToken();
+      const response = await fetch(`http://localhost:8082/api/doctors/${doctorId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -308,9 +333,71 @@ class AppointmentService {
       }
       return null;
     } catch (error) {
-      console.error('Error fetching appointment info:', error);
+      console.error('Error fetching doctor info:', error);
       return null;
     }
+  }
+
+  // Format date
+  static formatDate(dateString) {
+    if (!dateString) return 'Chưa cập nhật';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VI');
+    } catch (error) {
+      return dateString;
+    }
+  }
+
+  // Format time
+  static formatTime(timeString) {
+    if (!timeString) return '';
+    return timeString.slice(0, 5); // Lấy HH:MM
+  }
+
+  // Format status
+  static formatStatus(status) {
+    const statusMap = {
+      'PENDING': 'pending',
+      'CONFIRMED': 'confirmed', 
+      'COMPLETED': 'completed',
+      'CANCELLED': 'cancelled'
+    };
+    return statusMap[status] || status.toLowerCase();
+  }
+
+  // Mock data để test UI
+  static getMockAppointments() {
+    return [
+      {
+        appointmentId: 'APT001',
+        patientId: 'PAT001',
+        doctorId: 'DOC001',
+        patientName: 'Nguyễn Văn A',
+        doctorName: 'Dr. Trần Thị B',
+        appointmentDate: '2025-11-20',
+        appointmentStart: '09:00',
+        appointmentEnd: '09:30',
+        specialty: 'Tim mạch',
+        reason: 'Khám tổng quát',
+        status: 'CONFIRMED',
+        totalPrice: 300000
+      },
+      {
+        appointmentId: 'APT002',
+        patientId: 'PAT002',
+        doctorId: 'DOC002',
+        patientName: 'Lê Thị C',
+        doctorName: 'Dr. Phạm Văn D',
+        appointmentDate: '2025-11-21',
+        appointmentStart: '10:00',
+        appointmentEnd: '10:30',
+        specialty: 'Nhi khoa',
+        reason: 'Tiêm phòng',
+        status: 'PENDING',
+        totalPrice: 200000
+      }
+    ];
   }
 }
 

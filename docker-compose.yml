@@ -50,7 +50,8 @@ services:
 
     env_file:
       - .env
-
+    volumes:
+      - ./uploads:/app/uploads
     depends_on:
       user_db:
         condition: service_healthy

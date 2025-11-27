@@ -1,14 +1,19 @@
 package com.healthcare.user_service.service.impl;
 
+import com.healthcare.user_service.common.CodeGeneratorUtils;
 import com.healthcare.user_service.dto.DoctorDTO;
 import com.healthcare.user_service.dto.DoctorRequest;
 import com.healthcare.user_service.entity.Doctor;
 import com.healthcare.user_service.entity.Gender;
 import com.healthcare.user_service.repository.DoctorRepository;
 import com.healthcare.user_service.service.DoctorService;
+import com.healthcare.user_service.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -19,34 +24,53 @@ import java.util.stream.Collectors;
 public class DoctorServiceImpl implements DoctorService {
 
     private final DoctorRepository doctorRepository;
-
+    private final FileStorageService fileStorageService;
     @Override
-    public DoctorDTO createDoctor(DoctorRequest doctorRequest) {
+    public DoctorDTO createDoctor(String userId,
+                                  String fullName,
+                                  String gender,
+                                  LocalDate dateOfBirth,
+                                  String address,
+                                  String district,
+                                  String city,
+                                  String specialityId,
+                                  String clinicName,
+                                  String clinicDescription,
+                                  String bio,
+                                  MultipartFile profileImg,
+                                  MultipartFile coverImg) {
         // Check if doctor already exists for this user
         try {
-            if (doctorRepository.existsByUserId(doctorRequest.getUserId())) {
+            if (doctorRepository.existsByUserId(userId)) {
                 throw new RuntimeException("Doctor already exists for this user");
             }
 
             Doctor doctor = new Doctor();
-            doctor.setDoctorId(generateDoctorId());
-            doctor.setUserId(doctorRequest.getUserId());
-            doctor.setFullName(doctorRequest.getFullName());
+            doctor.setDoctorId(CodeGeneratorUtils.generateCode("doc"));
+            doctor.setUserId(userId);
+            doctor.setFullName(fullName);
             try {
-                doctor.setGender(Gender.valueOf(doctorRequest.getGender().toUpperCase()));
+                doctor.setGender(Gender.valueOf(gender.toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid gender value: " + doctorRequest.getGender() + "Must be MALE or FEMALE");
+                throw new RuntimeException("Invalid gender value: " + gender + "Must be MALE or FEMALE");
             }
-            doctor.setDateOfBirth(doctorRequest.getDateOfBirth());
-            doctor.setAddress(doctorRequest.getAddress());
-            doctor.setDistrict(doctorRequest.getDistrict());
-            doctor.setCity(doctorRequest.getCity());
-            doctor.setSpecialityId(doctorRequest.getSpecialityId());
-            doctor.setClinicName(doctorRequest.getClinicName());
-            doctor.setClinicDescription(doctorRequest.getClinicDescription());
-            doctor.setBio(doctorRequest.getBio());
-            doctor.setProfileImg(doctorRequest.getProfileImg());
-            doctor.setCoverImg(doctorRequest.getCoverImg());
+            doctor.setDateOfBirth(dateOfBirth);
+            doctor.setAddress(address);
+            doctor.setDistrict(district);
+            doctor.setCity(city);
+            doctor.setSpecialityId(specialityId);
+            doctor.setClinicName(clinicName);
+            doctor.setClinicDescription(clinicDescription);
+            doctor.setBio(bio);
+            if(profileImg != null && !profileImg.isEmpty()){
+                String profileUrl = fileStorageService.save(profileImg);
+                doctor.setProfileImg(profileUrl);
+            }
+
+            if(coverImg != null && !coverImg.isEmpty()){
+                String coverUrl = fileStorageService.save(coverImg);
+                doctor.setCoverImg(coverUrl);
+            }
 
             Doctor savedDoctor = doctorRepository.save(doctor);
             return convertToDTO(savedDoctor);
@@ -98,26 +122,46 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public DoctorDTO updateDoctor(String doctorId, DoctorRequest doctorRequest) {
+    public DoctorDTO updateDoctor(String doctorId,
+                                  String fullName,
+                                  String gender,
+                                  LocalDate dateOfBirth,
+                                  String address,
+                                  String district,
+                                  String city,
+                                  String specialityId,
+                                  String clinicName,
+                                  String clinicDescription,
+                                  String bio,
+                                  MultipartFile profileImg,
+                                  MultipartFile coverImg) {
         Doctor existingDoctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found with id: " + doctorId));
 
-        existingDoctor.setFullName(doctorRequest.getFullName());
+        existingDoctor.setFullName(fullName);
         try {
-            existingDoctor.setGender(Gender.valueOf(doctorRequest.getGender().toUpperCase()));
+            existingDoctor.setGender(Gender.valueOf(gender.toUpperCase()));
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid gender value: " + doctorRequest.getGender());
+            throw new RuntimeException("Invalid gender value: " + gender + "Must be MALE or FEMALE");
         }
-        existingDoctor.setDateOfBirth(doctorRequest.getDateOfBirth());
-        existingDoctor.setAddress(doctorRequest.getAddress());
-        existingDoctor.setDistrict(doctorRequest.getDistrict());
-        existingDoctor.setCity(doctorRequest.getCity());
-        existingDoctor.setSpecialityId(doctorRequest.getSpecialityId());
-        existingDoctor.setClinicName(doctorRequest.getClinicName());
-        existingDoctor.setClinicDescription(doctorRequest.getClinicDescription());
-        existingDoctor.setBio(doctorRequest.getBio());
-        existingDoctor.setProfileImg(doctorRequest.getProfileImg());
-        existingDoctor.setCoverImg(doctorRequest.getCoverImg());
+        existingDoctor.setDateOfBirth(dateOfBirth);
+        existingDoctor.setAddress(address);
+        existingDoctor.setDistrict(district);
+        existingDoctor.setCity(city);
+        existingDoctor.setSpecialityId(specialityId);
+        existingDoctor.setClinicName(clinicName);
+        existingDoctor.setClinicDescription(clinicDescription);
+        existingDoctor.setBio(bio);
+        if(profileImg != null && !profileImg.isEmpty()){
+            String profileUrl = fileStorageService.save(profileImg);
+            existingDoctor.setProfileImg(profileUrl);
+        }
+
+        if(coverImg != null && !coverImg.isEmpty()){
+            String coverUrl = fileStorageService.save(coverImg);
+            existingDoctor.setCoverImg(coverUrl);
+        }
+
 
         Doctor updatedDoctor = doctorRepository.save(existingDoctor);
         return convertToDTO(updatedDoctor);
@@ -155,9 +199,9 @@ public class DoctorServiceImpl implements DoctorService {
         return dto;
     }
 
-    private String generateDoctorId() {
-        return "doc" + UUID.randomUUID().toString().substring(0, 8);
-    }
+//    private String generateDoctorId() {
+//        return "doc" + UUID.randomUUID().toString().substring(0, 8);
+//    }
     @Override
     public String getUserIdByDoctorId(String doctorId){
         String userId = doctorRepository.findUserIdByDoctorId(doctorId);

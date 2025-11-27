@@ -5,12 +5,14 @@ import com.healthcare.user_service.dto.DoctorRequest;
 import com.healthcare.user_service.service.DoctorService;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,9 +25,33 @@ public class DoctorController {
 
 
     @PostMapping
-    public ResponseEntity<DoctorDTO> createDoctor(@Valid @RequestBody DoctorRequest doctorRequest)
+    public ResponseEntity<DoctorDTO> createDoctor(@RequestParam String userId,
+                                                  @RequestParam String fullName,
+                                                  @RequestParam String gender,
+                                                  @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateOfBirth,
+                                                  @RequestParam String address,
+                                                  @RequestParam String district,
+                                                  @RequestParam String city,
+                                                  @RequestParam String specialityId,
+                                                  @RequestParam String clinicName,
+                                                  @RequestParam String clinicDescription,
+                                                  @RequestParam String bio,
+                                                  @RequestParam MultipartFile profileImg,
+                                                  @RequestParam MultipartFile coverImg)
     {
-        DoctorDTO createdDoctor = doctorService.createDoctor(doctorRequest);
+        DoctorDTO createdDoctor = doctorService.createDoctor(userId,
+                fullName,
+                gender,
+                dateOfBirth,
+                address,
+                district,
+                city,
+                specialityId,
+                clinicName,
+                clinicDescription,
+                bio,
+                profileImg,
+                coverImg);
         return new ResponseEntity<>(createdDoctor, HttpStatus.CREATED);
     }
 //    @PreAuthorize("hasRole('ADMIN) or @userSecurity.isOwnProfile(authentication, #doctorId)")
@@ -69,10 +95,33 @@ public class DoctorController {
     @PutMapping("/{doctorId}")
     public ResponseEntity<DoctorDTO> updateDoctor(
          @PathVariable String doctorId,
-         @Valid @RequestBody DoctorRequest doctorRequest
+         @RequestParam String fullName,
+         @RequestParam String gender,
+         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateOfBirth,
+         @RequestParam String address,
+         @RequestParam String district,
+         @RequestParam String city,
+         @RequestParam String specialityId,
+         @RequestParam String clinicName,
+         @RequestParam String clinicDescription,
+         @RequestParam String bio,
+         @RequestParam MultipartFile profileImg,
+         @RequestParam MultipartFile coverImg
     )
     {
-        DoctorDTO updatedDoctor = doctorService.updateDoctor(doctorId, doctorRequest);
+        DoctorDTO updatedDoctor = doctorService.updateDoctor(doctorId,
+                fullName,
+                gender,
+                dateOfBirth,
+                address,
+                district,
+                city,
+                specialityId,
+                clinicName,
+                clinicDescription,
+                bio,
+                profileImg,
+                coverImg);
         return ResponseEntity.ok(updatedDoctor);
     }
 

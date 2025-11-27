@@ -1,9 +1,36 @@
-// services/doctorService.js
+import AuthService from './authService';
+
+const API_BASE_URL = 'http://localhost:8082/api';
+
 class DoctorService {
+  // Lấy danh sách tất cả doctors
+  static async getAllDoctors() {
+    try {
+      const token = AuthService.getToken();
+      const response = await fetch(`${API_BASE_URL}/doctors`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+      throw error;
+    }
+  }
+
+  // Lấy thông tin doctor theo userId
   static async getDoctorProfile(userId) {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8082/api/doctors/user/${userId}`, {
+      const token = AuthService.getToken();
+      const response = await fetch(`${API_BASE_URL}/doctors/user/${userId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -21,6 +48,31 @@ class DoctorService {
       throw error;
     }
   }
+
+  // Lấy danh sách chuyên khoa
+  static async getSpecialities() {
+    try {
+      const token = AuthService.getToken();
+      const response = await fetch(`${API_BASE_URL}/specialities`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching specialities:', error);
+      throw error;
+    }
+  }
+
+  // Các method cũ giữ nguyên
   static formatUpdateData(data) {
     const formatted = { ...data };
     
@@ -46,6 +98,7 @@ class DoctorService {
 
     return formatted;
   }
+
   static convertGenderToEnglish(gender) {
     const genderMap = {
       'nam': 'MALE',
@@ -58,19 +111,17 @@ class DoctorService {
       'female': 'FEMALE'
     };
     
-    // Chuyển về chữ thường và tìm trong map
     const normalizedGender = gender.toLowerCase().trim();
     return genderMap[normalizedGender] || 'OTHER';
   }
+
   static formatDateToBackend(dateString) {
     if (!dateString) return '';
     
-    // Nếu dateString đã ở định dạng yyyy-MM-dd thì giữ nguyên
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       return dateString;
     }
     
-    // Chuyển từ dd/MM/yyyy sang yyyy-MM-dd
     const parts = dateString.split('/');
     if (parts.length === 3) {
       const day = parts[0].padStart(2, '0');
@@ -84,11 +135,10 @@ class DoctorService {
 
   static async updateDoctorProfile(doctorId, updateData) {
     try {
-      const token = localStorage.getItem('token');
-
+      const token = AuthService.getToken();
       const formattedData = this.formatUpdateData(updateData);
 
-      const response = await fetch(`http://localhost:8082/api/doctors/${doctorId}`, {
+      const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -111,8 +161,8 @@ class DoctorService {
 
   static async getSpecialityName(specialityId) {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8082/api/specialities/${specialityId}`, {
+      const token = AuthService.getToken();
+      const response = await fetch(`${API_BASE_URL}/specialities/${specialityId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -122,7 +172,7 @@ class DoctorService {
 
       if (response.ok) {
         const speciality = await response.json();
-        return speciality.name; // Sửa thành 'name' thay vì 'getName'
+        return speciality.specialityName || 'Chưa cập nhật';
       }
       return 'Chưa cập nhật';
     } catch (error) {

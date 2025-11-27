@@ -140,8 +140,9 @@ const Booking = () => {
           }
         );
 
+        let scheduleData = null;
         if (scheduleResponse.ok) {
-          const scheduleData = await scheduleResponse.json();
+          scheduleData = await scheduleResponse.json();
           console.log('Schedule data:', scheduleData);
           setScheduleData(scheduleData);
           
@@ -229,17 +230,19 @@ const Booking = () => {
           const patientData = await PatientService.getPatientByUserId(currentUserId, token);
           console.log('Existing patient data:', patientData);
           
-          // Tự động điền thông tin patient vào form
-          setFormData(prev => ({
-            ...prev,
-            patientName: patientData.fullName || '',
-            gender: patientData.gender || 'FEMALE',
-            dateOfBirth: patientData.dateOfBirth || '',
-            city: patientData.city || '',
-            district: patientData.district || '',
-            address: patientData.address || '',
-            insuranceNum: patientData.insuranceNum || ''
-          }));
+          if (patientData) {
+            // Tự động điền thông tin patient vào form
+            setFormData(prev => ({
+              ...prev,
+              patientName: patientData.fullName || '',
+              gender: patientData.gender || 'FEMALE',
+              dateOfBirth: patientData.dateOfBirth || '',
+              city: patientData.city || '',
+              district: patientData.district || '',
+              address: patientData.address || '',
+              insuranceNum: patientData.insuranceNum || ''
+            }));
+          }
         } catch (patientError) {
           console.log('No existing patient found, user will fill form manually');
         }

@@ -61,10 +61,11 @@ const Sidebar = ({ userRole = 'admin' }) => {
 
   const adminMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: UserCog, label: 'Doctors', path: '/dashboard/doctors' },
-    { icon: Users, label: 'Patients', path: '/dashboard/patients' },
-    { icon: Calendar, label: 'Appointments', path: '/dashboard/appointments' },
-    { icon: FileText, label: 'Reports', path: '/dashboard/reports' },
+    { icon: UserCog, label: 'Quản lý bác sĩ', path: '/dashboard/doctors' },
+    { icon: Users, label: 'Quản lý bệnh nhân', path: '/dashboard/patients' },
+    { icon: Users, label: 'Quản lý người dùng', path: '/dashboard/users' },
+    { icon: Calendar, label: 'Quản lý lịch hẹn', path: '/dashboard/appointments' },
+    { icon: FileText, label: 'Thống kê báo cáo', path: '/dashboard/reports' },
   ];
 
   const doctorMenuItems = [

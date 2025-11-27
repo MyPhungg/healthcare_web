@@ -12,7 +12,9 @@ import {
   CheckCircle,
   XCircle,
   Clock4,
-  Loader
+  Loader,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import Button from '../../components/common/button';
 import AppointmentService from '../../service/appointmentService';
@@ -29,31 +31,35 @@ const DoctorAppointment = () => {
   const [patientDetails, setPatientDetails] = useState({});
   const [scheduleId, setScheduleId] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch schedule and appointments
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const doctorId = await getDoctorId();
-        if (doctorId) {
-          const scheduleData = await ScheduleService.getDoctorSchedule(doctorId);
-          if (scheduleData) {
-            setScheduleId(scheduleData.scheduleId);
-            const appointmentsData = await AppointmentService.getAppointmentsBySchedule(scheduleData.scheduleId);
-            setAppointments(appointmentsData);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        alert('Lỗi khi tải dữ liệu: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const doctorId = await getDoctorId();
+      if (doctorId) {
+        const scheduleData = await ScheduleService.getDoctorSchedule(doctorId);
+        if (scheduleData) {
+          setScheduleId(scheduleData.scheduleId);
+          const appointmentsData = await AppointmentService.getAppointmentsBySchedule(scheduleData.scheduleId);
+          setAppointments(appointmentsData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Lỗi khi tải dữ liệu: ' + error.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const getDoctorId = async () => {
     try {
@@ -67,14 +73,8 @@ const DoctorAppointment = () => {
   };
 
   const refreshAppointments = async () => {
-    if (scheduleId) {
-      try {
-        const appointmentsData = await AppointmentService.getAppointmentsBySchedule(scheduleId);
-        setAppointments(appointmentsData);
-      } catch (error) {
-        console.error('Error refreshing appointments:', error);
-      }
-    }
+    setRefreshing(true);
+    await fetchData();
   };
 
   const filteredAppointments = appointments.filter(apt => {
@@ -136,48 +136,56 @@ const DoctorAppointment = () => {
     }
   };
 
-  const handleConfirmAppointment = async (appointmentId) => {
+  // Generic function to handle status change
+  const handleStatusChange = async (appointmentId, newStatus) => {
     try {
-      setActionLoading(appointmentId);
-      await AppointmentService.confirmAppointment(appointmentId);
-      alert('Đã xác nhận lịch hẹn!');
+      setActionLoading(`${appointmentId}-${newStatus}`);
+      
+      // Check if status transition is allowed
+      const appointment = appointments.find(apt => apt.appointmentId === appointmentId);
+      if (appointment && !AppointmentService.isStatusTransitionAllowed(appointment.status, newStatus)) {
+        alert(`Không thể chuyển từ ${AppointmentService.getStatusDisplayName(appointment.status)} sang ${AppointmentService.getStatusDisplayName(newStatus)}`);
+        return;
+      }
+
+      await AppointmentService.changeAppointmentStatus(appointmentId, newStatus);
+      
+      // Show success message based on status
+      const successMessages = {
+        'CONFIRMED': 'Đã xác nhận lịch hẹn!',
+        'COMPLETED': 'Đã đánh dấu hoàn thành lịch hẹn!',
+        'CANCELLED': 'Đã hủy lịch hẹn!'
+      };
+      
+      alert(successMessages[newStatus] || 'Đã thay đổi trạng thái lịch hẹn!');
+      
+      // Refresh appointments and close modal if open
       await refreshAppointments();
+      if (selectedAppointment?.appointmentId === appointmentId) {
+        setSelectedAppointment(null);
+      }
+      
     } catch (error) {
-      console.error('Error confirming appointment:', error);
-      alert('Lỗi khi xác nhận lịch hẹn: ' + error.message);
+      console.error(`Error changing appointment status to ${newStatus}:`, error);
+      alert(`Lỗi khi thay đổi trạng thái: ${error.message}`);
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Specific handlers using the generic function
+  const handleConfirmAppointment = async (appointmentId) => {
+    await handleStatusChange(appointmentId, 'CONFIRMED');
   };
 
   const handleCancelAppointment = async (appointmentId) => {
     if (window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
-      try {
-        setActionLoading(appointmentId);
-        await AppointmentService.cancelAppointment(appointmentId);
-        alert('Đã hủy lịch hẹn!');
-        await refreshAppointments();
-      } catch (error) {
-        console.error('Error cancelling appointment:', error);
-        alert('Lỗi khi hủy lịch hẹn: ' + error.message);
-      } finally {
-        setActionLoading(null);
-      }
+      await handleStatusChange(appointmentId, 'CANCELLED');
     }
   };
 
   const handleCompleteAppointment = async (appointmentId) => {
-    try {
-      setActionLoading(appointmentId);
-      await AppointmentService.completeAppointment(appointmentId);
-      alert('Đã đánh dấu hoàn thành lịch hẹn!');
-      await refreshAppointments();
-    } catch (error) {
-      console.error('Error completing appointment:', error);
-      alert('Lỗi khi hoàn thành lịch hẹn: ' + error.message);
-    } finally {
-      setActionLoading(null);
-    }
+    await handleStatusChange(appointmentId, 'COMPLETED');
   };
 
   const handleViewDetails = async (appointment) => {
@@ -221,6 +229,60 @@ const DoctorAppointment = () => {
     return stats;
   };
 
+  // Get available actions for appointment status
+  const getAvailableActions = (appointment) => {
+    const actions = [];
+    
+    switch (appointment.status) {
+      case 'PENDING':
+        actions.push(
+          { 
+            label: 'Xác nhận', 
+            action: () => handleConfirmAppointment(appointment.appointmentId), 
+            color: 'green',
+            icon: CheckCircle,
+            status: 'CONFIRMED'
+          },
+          { 
+            label: 'Hủy', 
+            action: () => handleCancelAppointment(appointment.appointmentId), 
+            color: 'red',
+            icon: XCircle,
+            status: 'CANCELLED'
+          }
+        );
+        break;
+      case 'CONFIRMED':
+        actions.push(
+          { 
+            label: 'Hoàn thành', 
+            action: () => handleCompleteAppointment(appointment.appointmentId), 
+            color: 'blue',
+            icon: CheckCircle,
+            status: 'COMPLETED'
+          },
+          { 
+            label: 'Hủy', 
+            action: () => handleCancelAppointment(appointment.appointmentId), 
+            color: 'red',
+            icon: XCircle,
+            status: 'CANCELLED'
+          }
+        );
+        break;
+      case 'COMPLETED':
+        // Không có action nào sau khi hoàn thành
+        break;
+      case 'CANCELLED':
+        // Không có action nào sau khi hủy
+        break;
+      default:
+        break;
+    }
+    
+    return actions;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -239,12 +301,35 @@ const DoctorAppointment = () => {
           <p className="text-gray-600 mt-2">Quản lý lịch hẹn khám bệnh</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={refreshAppointments}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Đang làm mới...' : 'Làm mới'}
+          </button>
           <Button variant="primary">
             <Calendar size={20} className="mr-2" />
             Lịch làm việc
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-start gap-3">
+          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">{error}</p>
+            <button 
+              onClick={fetchData}
+              className="text-sm underline hover:text-red-800 mt-1"
+            >
+              Thử lại
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -287,6 +372,8 @@ const DoctorAppointment = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {todayAppointments.map((appointment) => {
               const priority = getPriorityBadge(appointment);
+              const availableActions = getAvailableActions(appointment);
+              
               return (
                 <div key={appointment.appointmentId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start mb-3">
@@ -310,6 +397,36 @@ const DoctorAppointment = () => {
                       Chi tiết
                     </button>
                   </div>
+                  
+                  {/* Quick Actions */}
+                  {availableActions.length > 0 && (
+                    <div className="flex gap-2 mt-3">
+                      {availableActions.map((action, index) => {
+                        const IconComponent = action.icon;
+                        const isLoading = actionLoading === `${appointment.appointmentId}-${action.status}`;
+                        
+                        return (
+                          <button
+                            key={index}
+                            onClick={action.action}
+                            disabled={isLoading}
+                            className={`flex-1 py-1 px-2 text-xs rounded transition-colors disabled:opacity-50
+                              ${action.color === 'green' ? 'bg-green-500 hover:bg-green-600 text-white' : ''}
+                              ${action.color === 'red' ? 'bg-red-500 hover:bg-red-600 text-white' : ''}
+                              ${action.color === 'blue' ? 'bg-blue-500 hover:bg-blue-600 text-white' : ''}
+                            `}
+                            title={action.label}
+                          >
+                            {isLoading ? (
+                              <Loader size={12} className="animate-spin mx-auto" />
+                            ) : (
+                              <IconComponent size={12} className="mx-auto" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -379,7 +496,7 @@ const DoctorAppointment = () => {
             <tbody>
               {filteredAppointments.map((appointment, index) => {
                 const priority = getPriorityBadge(appointment);
-                const isLoading = actionLoading === appointment.appointmentId;
+                const availableActions = getAvailableActions(appointment);
                 
                 return (
                   <tr 
@@ -431,40 +548,30 @@ const DoctorAppointment = () => {
                           onClick={() => handleViewDetails(appointment)}
                           className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50"
                           title="Xem chi tiết"
-                          disabled={isLoading}
                         >
                           <Eye size={16} />
                         </button>
-                        {appointment.status === 'PENDING' && (
-                          <>
+                        
+                        {availableActions.map((action, actionIndex) => {
+                          const IconComponent = action.icon;
+                          const isLoading = actionLoading === `${appointment.appointmentId}-${action.status}`;
+                          
+                          return (
                             <button 
-                              onClick={() => handleConfirmAppointment(appointment.appointmentId)}
-                              className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                              title="Xác nhận"
+                              key={actionIndex}
+                              onClick={action.action}
                               disabled={isLoading}
+                              className={`p-2 bg-${action.color}-500 hover:bg-${action.color}-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                              title={action.label}
                             >
-                              {isLoading ? <Loader size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                              {isLoading ? (
+                                <Loader size={16} className="animate-spin" />
+                              ) : (
+                                <IconComponent size={16} />
+                              )}
                             </button>
-                            <button 
-                              onClick={() => handleCancelAppointment(appointment.appointmentId)}
-                              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                              title="Hủy lịch"
-                              disabled={isLoading}
-                            >
-                              {isLoading ? <Loader size={16} className="animate-spin" /> : <XCircle size={16} />}
-                            </button>
-                          </>
-                        )}
-                        {appointment.status === 'CONFIRMED' && (
-                          <button 
-                            onClick={() => handleCompleteAppointment(appointment.appointmentId)}
-                            className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                            title="Hoàn thành"
-                            disabled={isLoading}
-                          >
-                            {isLoading ? <Loader size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                          </button>
-                        )}
+                          );
+                        })}
                       </div>
                     </td>
                   </tr>
@@ -571,48 +678,26 @@ const DoctorAppointment = () => {
                   <Button variant="outline" onClick={() => setSelectedAppointment(null)}>
                     Đóng
                   </Button>
-                  {selectedAppointment.status === 'PENDING' && (
-                    <>
+                  {getAvailableActions(selectedAppointment).map((action, index) => {
+                    const IconComponent = action.icon;
+                    const isLoading = actionLoading === `${selectedAppointment.appointmentId}-${action.status}`;
+                    
+                    return (
                       <Button 
-                        variant="primary" 
-                        onClick={() => handleConfirmAppointment(selectedAppointment.appointmentId)}
-                        disabled={actionLoading === selectedAppointment.appointmentId}
+                        key={index}
+                        variant={action.color === 'red' ? 'danger' : 'primary'}
+                        onClick={action.action}
+                        disabled={isLoading}
                       >
-                        {actionLoading === selectedAppointment.appointmentId ? (
+                        {isLoading ? (
                           <Loader size={18} className="animate-spin mr-2" />
                         ) : (
-                          <CheckCircle size={18} className="mr-2" />
+                          <IconComponent size={18} className="mr-2" />
                         )}
-                        Xác nhận lịch hẹn
+                        {action.label}
                       </Button>
-                      <Button 
-                        variant="danger" 
-                        onClick={() => handleCancelAppointment(selectedAppointment.appointmentId)}
-                        disabled={actionLoading === selectedAppointment.appointmentId}
-                      >
-                        {actionLoading === selectedAppointment.appointmentId ? (
-                          <Loader size={18} className="animate-spin mr-2" />
-                        ) : (
-                          <XCircle size={18} className="mr-2" />
-                        )}
-                        Hủy lịch hẹn
-                      </Button>
-                    </>
-                  )}
-                  {selectedAppointment.status === 'CONFIRMED' && (
-                    <Button 
-                      variant="primary" 
-                      onClick={() => handleCompleteAppointment(selectedAppointment.appointmentId)}
-                      disabled={actionLoading === selectedAppointment.appointmentId}
-                    >
-                      {actionLoading === selectedAppointment.appointmentId ? (
-                        <Loader size={18} className="animate-spin mr-2" />
-                      ) : (
-                        <CheckCircle size={18} className="mr-2" />
-                      )}
-                      Đánh dấu hoàn thành
-                    </Button>
-                  )}
+                    );
+                  })}
                 </div>
               </div>
             </div>

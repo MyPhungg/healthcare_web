@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Calendar, Clock, User, Filter, Edit, Trash2, Eye, Loader, RefreshCw, AlertCircle } from 'lucide-react';
+import { Search, Plus, Calendar, Clock, User, Filter, Edit, Trash2, Eye, Loader, RefreshCw, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
 import Button from '../../components/common/button';
 import AppointmentService from '../../service/appointmentService';
 
@@ -60,42 +60,91 @@ const AppointmentManagement = () => {
   const getStatusBadge = (status) => {
     const formattedStatus = AppointmentService.formatStatus(status);
     const config = {
-      pending: { label: 'Chờ xác nhận', bg: 'bg-yellow-100', text: 'text-yellow-700' },
-      confirmed: { label: 'Đã xác nhận', bg: 'bg-green-100', text: 'text-green-700' },
-      completed: { label: 'Hoàn thành', bg: 'bg-blue-100', text: 'text-blue-700' },
-      cancelled: { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-700' }
+      pending: { 
+        label: AppointmentService.getStatusDisplayName(status), 
+        bg: 'bg-yellow-100', 
+        text: 'text-yellow-700',
+        icon: Clock
+      },
+      confirmed: { 
+        label: AppointmentService.getStatusDisplayName(status), 
+        bg: 'bg-green-100', 
+        text: 'text-green-700',
+        icon: CheckCircle
+      },
+      completed: { 
+        label: AppointmentService.getStatusDisplayName(status), 
+        bg: 'bg-blue-100', 
+        text: 'text-blue-700',
+        icon: PlayCircle
+      },
+      cancelled: { 
+        label: AppointmentService.getStatusDisplayName(status), 
+        bg: 'bg-red-100', 
+        text: 'text-red-700',
+        icon: XCircle
+      }
     };
     
-    const { label, bg, text } = config[formattedStatus] || { label: status, bg: 'bg-gray-100', text: 'text-gray-700' };
-    return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${bg} ${text}`}>{label}</span>;
+    const { label, bg, text, icon: Icon } = config[formattedStatus] || { 
+      label: status, 
+      bg: 'bg-gray-100', 
+      text: 'text-gray-700',
+      icon: Clock
+    };
+    
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${bg} ${text}`}>
+        <Icon size={12} />
+        {label}
+      </span>
+    );
   };
 
-  const handleEdit = async (appointmentId) => {
+  // Handle status change
+  const handleStatusChange = async (appointmentId, newStatus) => {
+    try {
+      setActionLoading(`${appointmentId}-${newStatus}`);
+      
+      // Check if status transition is allowed
+      const appointment = appointments.find(apt => apt.appointmentId === appointmentId);
+      if (appointment && !AppointmentService.isStatusTransitionAllowed(appointment.status, newStatus)) {
+        alert(`Không thể chuyển từ ${AppointmentService.getStatusDisplayName(appointment.status)} sang ${AppointmentService.getStatusDisplayName(newStatus)}`);
+        return;
+      }
+
+      if (useMockData) {
+        // If using mock data, update locally
+        setAppointments(prev => 
+          prev.map(apt => 
+            apt.appointmentId === appointmentId 
+              ? { ...apt, status: newStatus }
+              : apt
+          )
+        );
+      } else {
+        // Call API to change status
+        await AppointmentService.changeAppointmentStatus(appointmentId, newStatus);
+        await fetchAppointments(); // Refresh data
+      }
+      
+      console.log(`Appointment ${appointmentId} status changed to: ${newStatus}`);
+    } catch (err) {
+      setError(`Không thể thay đổi trạng thái: ${err.message}`);
+      console.error('Error changing appointment status:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEdit = (appointmentId) => {
     console.log('Edit appointment:', appointmentId);
     // Implement edit functionality
   };
 
   const handleDelete = async (appointmentId) => {
     if (window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
-      try {
-        setActionLoading(appointmentId);
-        
-        if (useMockData) {
-          // If using mock data, just remove from frontend
-          setAppointments(prev => prev.filter(apt => apt.appointmentId !== appointmentId));
-        } else {
-          // Call API to cancel appointment
-          await AppointmentService.cancelAppointment(appointmentId);
-          await fetchAppointments();
-        }
-        
-        console.log('Appointment cancelled:', appointmentId);
-      } catch (err) {
-        setError('Không thể hủy lịch hẹn. Vui lòng thử lại.');
-        console.error('Error cancelling appointment:', err);
-      } finally {
-        setActionLoading(null);
-      }
+      await handleStatusChange(appointmentId, 'CANCELLED');
     }
   };
 
@@ -104,37 +153,59 @@ const AppointmentManagement = () => {
     // Implement view functionality
   };
 
-  const handleConfirm = async (appointmentId) => {
-    try {
-      setActionLoading(appointmentId);
-      await AppointmentService.confirmAppointment(appointmentId);
-      await fetchAppointments();
-      console.log('Appointment confirmed:', appointmentId);
-    } catch (err) {
-      setError('Không thể xác nhận lịch hẹn. Vui lòng thử lại.');
-      console.error('Error confirming appointment:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleComplete = async (appointmentId) => {
-    try {
-      setActionLoading(appointmentId);
-      await AppointmentService.completeAppointment(appointmentId);
-      await fetchAppointments();
-      console.log('Appointment completed:', appointmentId);
-    } catch (err) {
-      setError('Không thể đánh dấu hoàn thành. Vui lòng thử lại.');
-      console.error('Error completing appointment:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const handleCreateAppointment = () => {
     console.log('Create new appointment');
     // Implement create functionality
+  };
+
+  // Get available actions for appointment status
+  const getAvailableActions = (appointment) => {
+    const actions = [];
+    
+    switch (appointment.status) {
+      case 'PENDING':
+        actions.push(
+          { 
+            label: 'Xác nhận', 
+            action: () => handleStatusChange(appointment.appointmentId, 'CONFIRMED'), 
+            color: 'green',
+            icon: CheckCircle
+          },
+          { 
+            label: 'Hủy', 
+            action: () => handleStatusChange(appointment.appointmentId, 'CANCELLED'), 
+            color: 'red',
+            icon: XCircle
+          }
+        );
+        break;
+      case 'CONFIRMED':
+        actions.push(
+          { 
+            label: 'Hoàn thành', 
+            action: () => handleStatusChange(appointment.appointmentId, 'COMPLETED'), 
+            color: 'blue',
+            icon: PlayCircle
+          },
+          { 
+            label: 'Hủy', 
+            action: () => handleStatusChange(appointment.appointmentId, 'CANCELLED'), 
+            color: 'red',
+            icon: XCircle
+          }
+        );
+        break;
+      case 'COMPLETED':
+        // Không có action nào sau khi hoàn thành
+        break;
+      case 'CANCELLED':
+        // Không có action nào sau khi hủy
+        break;
+      default:
+        break;
+    }
+    
+    return actions;
   };
 
   if (loading) {
@@ -285,6 +356,7 @@ const AppointmentManagement = () => {
                 {filteredAppointments.map((appointment, index) => {
                   const timeDisplay = `${AppointmentService.formatTime(appointment.appointmentStart)} - ${AppointmentService.formatTime(appointment.appointmentEnd)}`;
                   const priceDisplay = appointment.totalPrice ? `${appointment.totalPrice.toLocaleString('vi-VN')} VNĐ` : 'Chưa cập nhật';
+                  const availableActions = getAvailableActions(appointment);
                   
                   return (
                     <tr 
@@ -342,46 +414,42 @@ const AppointmentManagement = () => {
                           >
                             <Eye size={16} />
                           </button>
-                          {appointment.status === 'PENDING' && (
+                          
+                          {availableActions.map((action, actionIndex) => {
+                            const IconComponent = action.icon;
+                            const isLoading = actionLoading === `${appointment.appointmentId}-${action.label}`;
+                            
+                            return (
+                              <button 
+                                key={actionIndex}
+                                onClick={action.action}
+                                disabled={isLoading}
+                                className={`p-2 bg-${action.color}-500 hover:bg-${action.color}-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                                title={action.label}
+                              >
+                                {isLoading ? (
+                                  <Loader size={16} className="animate-spin" />
+                                ) : (
+                                  <IconComponent size={16} />
+                                )}
+                              </button>
+                            );
+                          })}
+                          
+                          {(appointment.status === 'PENDING' || appointment.status === 'CONFIRMED') && (
                             <button 
-                              onClick={() => handleConfirm(appointment.appointmentId)}
-                              disabled={actionLoading === appointment.appointmentId}
-                              className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Xác nhận"
+                              onClick={() => handleDelete(appointment.appointmentId)}
+                              disabled={actionLoading}
+                              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Hủy lịch"
                             >
-                              {actionLoading === appointment.appointmentId ? (
+                              {actionLoading ? (
                                 <Loader size={16} className="animate-spin" />
                               ) : (
-                                '✓'
+                                <Trash2 size={16} />
                               )}
                             </button>
                           )}
-                          {appointment.status === 'CONFIRMED' && (
-                            <button 
-                              onClick={() => handleComplete(appointment.appointmentId)}
-                              disabled={actionLoading === appointment.appointmentId}
-                              className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Hoàn thành"
-                            >
-                              {actionLoading === appointment.appointmentId ? (
-                                <Loader size={16} className="animate-spin" />
-                              ) : (
-                                '✓'
-                              )}
-                            </button>
-                          )}
-                          <button 
-                            onClick={() => handleDelete(appointment.appointmentId)}
-                            disabled={actionLoading === appointment.appointmentId}
-                            className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Hủy lịch"
-                          >
-                            {actionLoading === appointment.appointmentId ? (
-                              <Loader size={16} className="animate-spin" />
-                            ) : (
-                              <Trash2 size={16} />
-                            )}
-                          </button>
                         </div>
                       </td>
                     </tr>

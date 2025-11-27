@@ -110,6 +110,4 @@ public class AppointmentController {
             throw new RuntimeException("Không thể lấy danh sách lịch hẹn: " + e.getMessage());
         }
     }
-
-
 }

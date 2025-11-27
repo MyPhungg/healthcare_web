@@ -46,6 +46,48 @@ class AppointmentService {
       throw error;
     }
   }
+  static async getAppointmentsBySchedule(scheduleId) {
+    try {
+      const token = AuthService.getToken();
+      console.log('Fetching appointments for schedule:', scheduleId);
+      
+      const response = await fetch(`${API_BASE_URL}/appointments/by-schedule?scheduleId=${scheduleId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Appointments by schedule response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage = 'Không thể lấy danh sách lịch hẹn theo lịch trình';
+        try {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        } catch (textError) {
+          console.error('Cannot read error text:', textError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Appointments by schedule data received:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.warn('Non-JSON response:', text);
+        return [];
+      }
+
+    } catch (error) {
+      console.error('Error in getAppointmentsBySchedule:', error);
+      throw error;
+    }
+  }
 
   // Lấy appointments theo doctor
   static async getAppointmentsByDoctor(doctorId) {
@@ -164,24 +206,26 @@ class AppointmentService {
     }
   }
 
-  // Hủy appointment
-  static async cancelAppointment(appointmentId) {
+  static async changeAppointmentStatus(appointmentId, status) {
     try {
       const token = AuthService.getToken();
-      console.log(`Cancelling appointment: ${appointmentId}`);
+      console.log(`Changing appointment ${appointmentId} status to: ${status}`);
       
-      const response = await fetch(`${API_BASE_URL}/appointments/cancel?appId=${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/change?appId=${appointmentId}&status=${status}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
 
-      console.log('Cancel appointment response status:', response.status);
+      console.log('Change status response status:', response.status);
 
       if (!response.ok) {
-        let errorMessage = 'Hủy lịch hẹn thất bại';
+        let errorMessage = `Không thể thay đổi trạng thái lịch hẹn thành ${status}`;
         try {
           const errorText = await response.text();
           errorMessage = errorText || errorMessage;
@@ -193,105 +237,68 @@ class AppointmentService {
 
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        return await response.json();
+        const result = await response.json();
+        console.log('Appointment status changed:', result);
+        return result;
       } else {
-        return { success: true, message: 'Hủy lịch hẹn thành công' };
+        return { success: true, message: `Đã thay đổi trạng thái thành ${status}` };
       }
 
     } catch (error) {
-      console.error('Error in cancelAppointment:', error);
+      console.error('Error in changeAppointmentStatus:', error);
       throw error;
     }
   }
-
-  // Xác nhận appointment
   static async confirmAppointment(appointmentId) {
-    try {
-      const token = AuthService.getToken();
-      console.log(`Confirming appointment: ${appointmentId}`);
-      
-      const response = await fetch(`${API_BASE_URL}/appointments/confirm?appId=${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Confirm appointment response status:', response.status);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log('Confirm endpoint not available, appointment status remains PENDING');
-          return { success: true, message: 'Lịch hẹn đã được giữ nguyên trạng thái chờ xác nhận' };
-        }
-        
-        let errorMessage = 'Xác nhận lịch hẹn thất bại';
-        try {
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
-        } catch (textError) {
-          console.error('Cannot read error text:', textError);
-        }
-        throw new Error(errorMessage);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
-      } else {
-        return { success: true, message: 'Xác nhận lịch hẹn thành công' };
-      }
-
-    } catch (error) {
-      console.error('Error in confirmAppointment:', error);
-      throw error;
-    }
+    return this.changeAppointmentStatus(appointmentId, 'CONFIRMED');
   }
 
-  // Hoàn thành appointment
   static async completeAppointment(appointmentId) {
-    try {
-      const token = AuthService.getToken();
-      console.log(`Completing appointment: ${appointmentId}`);
-      
-      const response = await fetch(`${API_BASE_URL}/appointments/complete?appId=${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+    return this.changeAppointmentStatus(appointmentId, 'COMPLETED');
+  }
 
-      console.log('Complete appointment response status:', response.status);
+  static async cancelAppointment(appointmentId) {
+    return this.changeAppointmentStatus(appointmentId, 'CANCELLED');
+  }
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log('Complete endpoint not available');
-          return { success: true, message: 'Chức năng đánh dấu hoàn thành chưa khả dụng' };
-        }
-        
-        let errorMessage = 'Đánh dấu hoàn thành thất bại';
-        try {
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
-        } catch (textError) {
-          console.error('Cannot read error text:', textError);
-        }
-        throw new Error(errorMessage);
-      }
+  static async pendingAppointment(appointmentId) {
+    return this.changeAppointmentStatus(appointmentId, 'PENDING');
+  }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
-      } else {
-        return { success: true, message: 'Đánh dấu hoàn thành thành công' };
-      }
+  // ... các method khác giữ nguyên ...
 
-    } catch (error) {
-      console.error('Error in completeAppointment:', error);
-      throw error;
-    }
+  // Format status với đầy đủ các trạng thái
+  static formatStatus(status) {
+    const statusMap = {
+      'PENDING': 'pending',
+      'CONFIRMED': 'confirmed', 
+      'COMPLETED': 'completed',
+      'CANCELLED': 'cancelled'
+    };
+    return statusMap[status] || status.toLowerCase();
+  }
+
+  // Get status display name
+  static getStatusDisplayName(status) {
+    const statusNames = {
+      'PENDING': 'Chờ xác nhận',
+      'CONFIRMED': 'Đã xác nhận',
+      'COMPLETED': 'Hoàn thành',
+      'CANCELLED': 'Đã hủy'
+    };
+    return statusNames[status] || status;
+  }
+
+  // Check if status transition is allowed
+  static isStatusTransitionAllowed(currentStatus, newStatus) {
+    const allowedTransitions = {
+      'PENDING': ['CONFIRMED', 'CANCELLED'],
+      'CONFIRMED': ['COMPLETED', 'CANCELLED'],
+      'COMPLETED': [], // Không thể thay đổi sau khi hoàn thành
+      'CANCELLED': []  // Không thể thay đổi sau khi hủy
+    };
+    
+    return allowedTransitions[currentStatus]?.includes(newStatus) || false;
   }
 
   // Lấy thông tin patient

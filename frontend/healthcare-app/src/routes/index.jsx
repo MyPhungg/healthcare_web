@@ -25,6 +25,7 @@ import AboutUs from '../pages/webPages/aboutus';
 import DoctorDetail from '../pages/webPages/DoctorDetail';
 import DoctorRegister from '../pages/dashboardPages/DoctorRegister';
 import UserManagement from '../pages/dashboardPages/userManagement';
+import SearchResults from '../components/web/searchResult';
 
 function AppRoutes() {
   return (
@@ -43,6 +44,7 @@ function AppRoutes() {
           <Route path="/profile" element={<Profile/>} />
           <Route path="/doctordetail/:doctorId" element={<DoctorDetail/>} />
           <Route path="/doctor-register" element={<DoctorRegister/>} />
+          <Route path="/search-results" element={<SearchResults/>} />
           {/* Add more routes as needed */}
         </Route>
                 {/* Admin Dashboard routes */}

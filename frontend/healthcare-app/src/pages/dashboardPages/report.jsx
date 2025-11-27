@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Download, 
@@ -10,87 +10,341 @@ import {
   DollarSign, 
   Clock,
   Stethoscope,
-  Activity
+  Activity,
+  Loader,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import Button from '../../components/common/button';
+import AppointmentService from '../../service/appointmentService';
+import PatientService from '../../service/patientService';
+import DoctorService from '../../service/doctorService';
+import UserService from '../../service/userService';
 
 const ReportPage = () => {
   const [dateRange, setDateRange] = useState({
-    startDate: '2025-01-01',
-    endDate: '2025-11-30'
+    startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // 1/1 của năm hiện tại
+    endDate: new Date().toISOString().split('T')[0] // Hôm nay
   });
   const [reportType, setReportType] = useState('overview');
   const [chartType, setChartType] = useState('bar');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Dữ liệu thống kê tổng quan
-  const overviewStats = [
-    {
-      title: 'Tổng bệnh nhân',
-      value: '1,245',
-      change: '+12.5%',
-      trend: 'up',
-      icon: Users,
-      color: 'blue'
-    },
-    {
-      title: 'Doanh thu',
-      value: '356,8M VNĐ',
-      change: '+8.3%',
-      trend: 'up',
-      icon: DollarSign,
-      color: 'green'
-    },
-    {
-      title: 'Lịch hẹn',
-      value: '2,867',
-      change: '+5.2%',
-      trend: 'up',
-      icon: Calendar,
-      color: 'purple'
-    },
-    {
-      title: 'Tỷ lệ hủy',
-      value: '4.2%',
-      change: '-1.1%',
-      trend: 'down',
-      icon: Activity,
-      color: 'red'
+  // State for report data
+  const [overviewStats, setOverviewStats] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
+  const [specialtyData, setSpecialtyData] = useState([]);
+  const [topDoctors, setTopDoctors] = useState([]);
+  const [appointmentTrends, setAppointmentTrends] = useState({});
+
+  // Fetch report data
+  const fetchReportData = async () => {
+    try {
+      setError(null);
+      const loadingState = refreshing ? setRefreshing : setLoading;
+      loadingState(true);
+
+      // Fetch all data in parallel
+      const [appointmentsData, patientsData, doctorsData, usersData] = await Promise.all([
+        AppointmentService.getAllAppointments().catch(err => {
+          console.error('Error fetching appointments:', err);
+          return [];
+        }),
+        PatientService.getAllPatients().catch(err => {
+          console.error('Error fetching patients:', err);
+          return [];
+        }),
+        DoctorService.getAllDoctors().catch(err => {
+          console.error('Error fetching doctors:', err);
+          return [];
+        }),
+        UserService.getAllUsers().catch(err => {
+          console.error('Error fetching users:', err);
+          return [];
+        })
+      ]);
+
+      console.log('Report data:', {
+        appointments: appointmentsData,
+        patients: patientsData,
+        doctors: doctorsData,
+        users: usersData
+      });
+
+      // Process data for reports
+      processReportData(appointmentsData, patientsData, doctorsData, usersData);
+
+    } catch (err) {
+      console.error('Error fetching report data:', err);
+      setError('Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+      // Fallback to mock data
+      setMockData();
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  };
 
-  // Dữ liệu doanh thu theo tháng
-  const revenueData = [
-    { month: 'Tháng 1', revenue: 28.5, appointments: 210 },
-    { month: 'Tháng 2', revenue: 32.1, appointments: 245 },
-    { month: 'Tháng 3', revenue: 29.8, appointments: 225 },
-    { month: 'Tháng 4', revenue: 35.2, appointments: 268 },
-    { month: 'Tháng 5', revenue: 38.9, appointments: 295 },
-    { month: 'Tháng 6', revenue: 42.3, appointments: 320 },
-    { month: 'Tháng 7', revenue: 45.1, appointments: 342 },
-    { month: 'Tháng 8', revenue: 48.7, appointments: 368 },
-    { month: 'Tháng 9', revenue: 52.4, appointments: 398 },
-    { month: 'Tháng 10', revenue: 55.8, appointments: 425 },
-    { month: 'Tháng 11', revenue: 58.2, appointments: 445 },
-  ];
+  // Process data for reports
+  const processReportData = (appointments, patients, doctors, users) => {
+    // Calculate overview stats
+    const totalPatients = patients.length || users.filter(user => user.role === 'PATIENT').length;
+    const totalDoctors = doctors.length || users.filter(user => user.role === 'DOCTOR').length;
+    
+    // Filter appointments by date range
+    const filteredAppointments = appointments.filter(apt => {
+      const aptDate = new Date(apt.appointmentDate);
+      const startDate = new Date(dateRange.startDate);
+      const endDate = new Date(dateRange.endDate);
+      return aptDate >= startDate && aptDate <= endDate;
+    });
 
-  // Dữ liệu chuyên khoa phổ biến
-  const specialtyData = [
-    { name: 'Tim mạch', value: 325, color: '#3B82F6' },
-    { name: 'Nhi khoa', value: 298, color: '#10B981' },
-    { name: 'Da liễu', value: 267, color: '#8B5CF6' },
-    { name: 'Thần kinh', value: 234, color: '#F59E0B' },
-    { name: 'Tiêu hóa', value: 198, color: '#EF4444' },
-    { name: 'Khác', value: 345, color: '#6B7280' }
-  ];
+    const totalAppointments = filteredAppointments.length;
+    const completedAppointments = filteredAppointments.filter(apt => apt.status === 'COMPLETED').length;
+    const cancelledAppointments = filteredAppointments.filter(apt => apt.status === 'CANCELLED').length;
+    const cancellationRate = totalAppointments > 0 ? (cancelledAppointments / totalAppointments * 100) : 0;
 
-  // Dữ liệu bác sĩ hàng đầu
-  const topDoctors = [
-    { name: 'Dr. Trần Thị B', specialty: 'Tim mạch', appointments: 156, revenue: 46.8 },
-    { name: 'Dr. Phạm Văn D', specialty: 'Nhi khoa', appointments: 142, revenue: 28.4 },
-    { name: 'Dr. Nguyễn F', specialty: 'Da liễu', appointments: 128, revenue: 32.0 },
-    { name: 'Dr. Lê H', specialty: 'Thần kinh', appointments: 115, revenue: 46.0 },
-    { name: 'Dr. Vũ Thị K', specialty: 'Tiêu hóa', appointments: 98, revenue: 24.5 }
-  ];
+    // Calculate revenue
+    const totalRevenue = filteredAppointments
+      .filter(apt => apt.status === 'COMPLETED')
+      .reduce((total, apt) => total + (apt.totalPrice || 0), 0);
+
+    // Update overview stats
+    setOverviewStats([
+      {
+        title: 'Tổng bệnh nhân',
+        value: totalPatients.toLocaleString(),
+        change: '+12.5%',
+        trend: 'up',
+        icon: Users,
+        color: 'blue'
+      },
+      {
+        title: 'Doanh thu',
+        value: `${(totalRevenue / 1000000).toFixed(1)}M VNĐ`,
+        change: '+8.3%',
+        trend: 'up',
+        icon: DollarSign,
+        color: 'green'
+      },
+      {
+        title: 'Lịch hẹn',
+        value: totalAppointments.toLocaleString(),
+        change: '+5.2%',
+        trend: 'up',
+        icon: Calendar,
+        color: 'purple'
+      },
+      {
+        title: 'Tỷ lệ hủy',
+        value: `${cancellationRate.toFixed(1)}%`,
+        change: '-1.1%',
+        trend: cancellationRate < 5 ? 'down' : 'up',
+        icon: Activity,
+        color: cancellationRate < 5 ? 'red' : 'orange'
+      }
+    ]);
+
+    // Generate monthly revenue data
+    generateMonthlyRevenueData(filteredAppointments);
+    
+    // Generate specialty distribution
+    generateSpecialtyData(doctors, filteredAppointments);
+    
+    // Generate top doctors data
+    generateTopDoctorsData(doctors, filteredAppointments);
+    
+    // Generate appointment trends
+    generateAppointmentTrends(filteredAppointments);
+  };
+
+  // Generate monthly revenue data
+  const generateMonthlyRevenueData = (appointments) => {
+    const monthlyData = {};
+    
+    appointments.forEach(apt => {
+      if (apt.status === 'COMPLETED') {
+        const date = new Date(apt.appointmentDate);
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        const monthName = `Tháng ${date.getMonth() + 1}`;
+        
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = {
+            month: monthName,
+            revenue: 0,
+            appointments: 0
+          };
+        }
+        
+        monthlyData[monthKey].revenue += apt.totalPrice || 0;
+        monthlyData[monthKey].appointments += 1;
+      }
+    });
+
+    const sortedData = Object.values(monthlyData)
+      .sort((a, b) => {
+        const aNum = parseInt(a.month.replace('Tháng ', ''));
+        const bNum = parseInt(b.month.replace('Tháng ', ''));
+        return aNum - bNum;
+      });
+
+    setRevenueData(sortedData);
+  };
+
+  // Generate specialty distribution data
+  const generateSpecialtyData = (doctors, appointments) => {
+    const specialtyCount = {};
+    
+    appointments.forEach(apt => {
+      const doctor = doctors.find(d => d.doctorId === apt.doctorId);
+      if (doctor && doctor.speciality) {
+        const specialtyName = doctor.speciality.specialityName || 'Khác';
+        specialtyCount[specialtyName] = (specialtyCount[specialtyName] || 0) + 1;
+      }
+    });
+
+    const specialtyColors = {
+      'Tim mạch': '#3B82F6',
+      'Nhi khoa': '#10B981',
+      'Da liễu': '#8B5CF6',
+      'Thần kinh': '#F59E0B',
+      'Tiêu hóa': '#EF4444',
+      'Khác': '#6B7280'
+    };
+
+    const sortedSpecialties = Object.entries(specialtyCount)
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: specialtyColors[name] || '#6B7280'
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    setSpecialtyData(sortedSpecialties);
+  };
+
+  // Generate top doctors data
+  const generateTopDoctorsData = (doctors, appointments) => {
+    const doctorStats = {};
+    
+    appointments.forEach(apt => {
+      if (apt.status === 'COMPLETED') {
+        if (!doctorStats[apt.doctorId]) {
+          doctorStats[apt.doctorId] = {
+            appointments: 0,
+            revenue: 0
+          };
+        }
+        doctorStats[apt.doctorId].appointments += 1;
+        doctorStats[apt.doctorId].revenue += apt.totalPrice || 0;
+      }
+    });
+
+    const topDoctorsList = Object.entries(doctorStats)
+      .map(([doctorId, stats]) => {
+        const doctor = doctors.find(d => d.doctorId === doctorId);
+        return {
+          name: doctor?.fullName || `Bác sĩ ${doctorId}`,
+          specialty: doctor?.speciality?.specialityName || 'Chưa cập nhật',
+          appointments: stats.appointments,
+          revenue: stats.revenue / 1000000 // Convert to millions
+        };
+      })
+      .sort((a, b) => b.appointments - a.appointments)
+      .slice(0, 5);
+
+    setTopDoctors(topDoctorsList);
+  };
+
+  // Generate appointment trends
+  const generateAppointmentTrends = (appointments) => {
+    const total = appointments.length;
+    const completed = appointments.filter(apt => apt.status === 'COMPLETED').length;
+    const cancelled = appointments.filter(apt => apt.status === 'CANCELLED').length;
+    
+    const keepRate = total > 0 ? (completed / total * 100) : 0;
+    const cancellationRate = total > 0 ? (cancelled / total * 100) : 0;
+    
+    setAppointmentTrends({
+      keepRate: keepRate.toFixed(1),
+      cancellationRate: cancellationRate.toFixed(1),
+      satisfactionRate: '94.0', // Placeholder - you might need feedback data
+      avgWaitTime: '22' // Placeholder
+    });
+  };
+
+  // Mock data fallback
+  const setMockData = () => {
+    setOverviewStats([
+      {
+        title: 'Tổng bệnh nhân',
+        value: '1,245',
+        change: '+12.5%',
+        trend: 'up',
+        icon: Users,
+        color: 'blue'
+      },
+      {
+        title: 'Doanh thu',
+        value: '356,8M VNĐ',
+        change: '+8.3%',
+        trend: 'up',
+        icon: DollarSign,
+        color: 'green'
+      },
+      {
+        title: 'Lịch hẹn',
+        value: '2,867',
+        change: '+5.2%',
+        trend: 'up',
+        icon: Calendar,
+        color: 'purple'
+      },
+      {
+        title: 'Tỷ lệ hủy',
+        value: '4.2%',
+        change: '-1.1%',
+        trend: 'down',
+        icon: Activity,
+        color: 'red'
+      }
+    ]);
+
+    setRevenueData([
+      { month: 'Tháng 1', revenue: 28.5, appointments: 210 },
+      { month: 'Tháng 2', revenue: 32.1, appointments: 245 },
+      // ... rest of mock data
+    ]);
+
+    setSpecialtyData([
+      { name: 'Tim mạch', value: 325, color: '#3B82F6' },
+      { name: 'Nhi khoa', value: 298, color: '#10B981' },
+      // ... rest of mock data
+    ]);
+
+    setTopDoctors([
+      { name: 'Dr. Trần Thị B', specialty: 'Tim mạch', appointments: 156, revenue: 46.8 },
+      // ... rest of mock data
+    ]);
+
+    setAppointmentTrends({
+      keepRate: '78.0',
+      cancellationRate: '4.2',
+      satisfactionRate: '94.0',
+      avgWaitTime: '22'
+    });
+  };
+
+  useEffect(() => {
+    fetchReportData();
+  }, [dateRange]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchReportData();
+  };
 
   const handleExportReport = () => {
     // Logic export report
@@ -103,7 +357,8 @@ const ReportPage = () => {
       blue: 'bg-blue-50 border-blue-200 text-blue-600',
       green: 'bg-green-50 border-green-200 text-green-600',
       purple: 'bg-purple-50 border-purple-200 text-purple-600',
-      red: 'bg-red-50 border-red-200 text-red-600'
+      red: 'bg-red-50 border-red-200 text-red-600',
+      orange: 'bg-orange-50 border-orange-200 text-orange-600'
     };
     return colors[color] || colors.blue;
   };
@@ -111,6 +366,17 @@ const ReportPage = () => {
   const getTrendColor = (trend) => {
     return trend === 'up' ? 'text-green-600' : 'text-red-600';
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <Loader className="animate-spin mx-auto mb-4 text-blue-600" size={32} />
+          <p className="text-gray-600">Đang tải dữ liệu báo cáo...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -121,6 +387,14 @@ const ReportPage = () => {
           <p className="text-gray-600 mt-2">Theo dõi hiệu suất và hiệu quả hoạt động</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Đang làm mới...' : 'Làm mới'}
+          </button>
           <Button variant="outline" onClick={handleExportReport}>
             <Download size={20} className="mr-2" />
             Xuất báo cáo
@@ -131,6 +405,16 @@ const ReportPage = () => {
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 flex items-start gap-3">
+          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">{error}</p>
+            <p className="text-sm mt-1">Đang hiển thị dữ liệu mẫu để demo</p>
+          </div>
+        </div>
+      )}
 
       {/* Date Range và Filter */}
       <div className="bg-white rounded-xl shadow-md p-4 border border-gray-200">
@@ -222,22 +506,27 @@ const ReportPage = () => {
             </div>
           </div>
           
-          {/* Simple Bar Chart (thay thế bằng chart library thực tế) */}
+          {/* Simple Bar Chart */}
           <div className="space-y-3">
-            {revenueData.map((item, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <div className="w-24 text-sm text-gray-600">{item.month}</div>
-                <div className="flex-1">
-                  <div 
-                    className="bg-blue-500 h-6 rounded-full transition-all duration-300 hover:bg-blue-600"
-                    style={{ width: `${(item.revenue / 60) * 100}%` }}
-                  ></div>
+            {revenueData.map((item, index) => {
+              const maxRevenue = Math.max(...revenueData.map(d => d.revenue));
+              const widthPercentage = maxRevenue > 0 ? (item.revenue / maxRevenue) * 100 : 0;
+              
+              return (
+                <div key={index} className="flex items-center gap-4">
+                  <div className="w-24 text-sm text-gray-600">{item.month}</div>
+                  <div className="flex-1">
+                    <div 
+                      className="bg-blue-500 h-6 rounded-full transition-all duration-300 hover:bg-blue-600"
+                      style={{ width: `${widthPercentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="w-20 text-right text-sm font-semibold text-gray-800">
+                    {item.revenue.toFixed(1)}M
+                  </div>
                 </div>
-                <div className="w-20 text-right text-sm font-semibold text-gray-800">
-                  {item.revenue}M
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -248,7 +537,7 @@ const ReportPage = () => {
             <PieChart className="text-purple-600" size={24} />
           </div>
           
-          {/* Simple Pie Chart Representation */}
+          {/* Specialty Distribution */}
           <div className="space-y-3">
             {specialtyData.map((item, index) => (
               <div key={index} className="flex items-center justify-between">
@@ -285,7 +574,7 @@ const ReportPage = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-800">{doctor.appointments} lượt</p>
-                  <p className="text-sm text-green-600">{doctor.revenue}M VNĐ</p>
+                  <p className="text-sm text-green-600">{doctor.revenue.toFixed(1)}M VNĐ</p>
                 </div>
               </div>
             ))}
@@ -301,7 +590,9 @@ const ReportPage = () => {
                 <DollarSign className="text-green-600" size={20} />
                 <span className="font-medium text-gray-700">Doanh thu khám bệnh</span>
               </div>
-              <span className="font-semibold text-green-600">285.4M VNĐ</span>
+              <span className="font-semibold text-green-600">
+                {overviewStats[1]?.value?.replace('M VNĐ', '') || '0'}M VNĐ
+              </span>
             </div>
             <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-3">
@@ -320,7 +611,9 @@ const ReportPage = () => {
             <div className="border-t pt-4 mt-4">
               <div className="flex justify-between items-center">
                 <span className="font-bold text-lg text-gray-800">Tổng doanh thu</span>
-                <span className="font-bold text-lg text-green-600">356.8M VNĐ</span>
+                <span className="font-bold text-lg text-green-600">
+                  {overviewStats[1]?.value || '0 VNĐ'}
+                </span>
               </div>
             </div>
           </div>
@@ -332,19 +625,19 @@ const ReportPage = () => {
         <h3 className="text-xl font-semibold text-gray-800 mb-6">Xu hướng lịch hẹn</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <p className="text-2xl font-bold text-blue-600">78%</p>
+            <p className="text-2xl font-bold text-blue-600">{appointmentTrends.keepRate}%</p>
             <p className="text-sm text-gray-600 mt-1">Tỷ lệ giữ lịch</p>
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg">
-            <p className="text-2xl font-bold text-green-600">22 phút</p>
+            <p className="text-2xl font-bold text-green-600">{appointmentTrends.avgWaitTime} phút</p>
             <p className="text-sm text-gray-600 mt-1">Thời gian chờ TB</p>
           </div>
           <div className="text-center p-4 bg-yellow-50 rounded-lg">
-            <p className="text-2xl font-bold text-yellow-600">94%</p>
+            <p className="text-2xl font-bold text-yellow-600">{appointmentTrends.satisfactionRate}%</p>
             <p className="text-sm text-gray-600 mt-1">Hài lòng</p>
           </div>
           <div className="text-center p-4 bg-red-50 rounded-lg">
-            <p className="text-2xl font-bold text-red-600">4.2%</p>
+            <p className="text-2xl font-bold text-red-600">{appointmentTrends.cancellationRate}%</p>
             <p className="text-sm text-gray-600 mt-1">Tỷ lệ hủy</p>
           </div>
         </div>
@@ -361,7 +654,7 @@ const ReportPage = () => {
             <li>Tăng trưởng doanh thu 8.3% so với cùng kỳ</li>
             <li>Tiếp nhận thêm 138 bệnh nhân mới</li>
             <li>Giảm tỷ lệ hủy lịch hẹn 1.1%</li>
-            <li>Chuyên khoa Tim mạch và Nhi khoa có số lượng khám cao nhất</li>
+            <li>Chuyên khoa {specialtyData[0]?.name || 'Tim mạch'} có số lượng khám cao nhất</li>
           </ul>
         </div>
       </div>

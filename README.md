@@ -120,12 +120,14 @@ http://localhost:3000
 - Gateway Service: Là entrypoint cho tất cả API.
 - User Service: Quản lý người dùng.
 - Appointment Service: Quản lý lịch hẹn.
+- Notification Service: Quản lý thông báo.
 
 ## Database
 
 - init.sql: Khởi tạo cơ sở dữ liệu chung.
 - user_service_db.sql: Cấu trúc bảng và dữ liệu ban đầu cho User Service.
 - appointment_service_db.sql: Cấu trúc bảng và dữ liệu ban đầu cho Appointment Service.
+- notification_service_db.sql: Cấu trúc bảng và dữ liệu ban đầu cho Notification Service.
 
 ## Frontend
 

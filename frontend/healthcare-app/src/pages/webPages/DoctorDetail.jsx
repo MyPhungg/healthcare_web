@@ -6,9 +6,9 @@ const DoctorDetail = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
   const [doctor, setDoctor] = useState(null);
-  const [schedule, setSchedule] = useState(null); // SỬA: đổi từ [] thành null
+  const [schedule, setSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [scheduleLoading, setScheduleLoading] = useState(true); // SỬA: sửa chính tả
+  const [scheduleLoading, setScheduleLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Fetch doctor details only
@@ -24,7 +24,6 @@ const DoctorDetail = () => {
 
         console.log('Fetching doctor detail for ID:', doctorId);
 
-        // Fetch doctor details only
         const response = await fetch(
           `http://localhost:8082/api/doctors/${doctorId}`,
           {
@@ -36,7 +35,6 @@ const DoctorDetail = () => {
           }
         );
 
-        // Read response as text first
         const responseText = await response.text();
         console.log('Raw doctor response:', responseText.substring(0, 200) + '...');
 
@@ -44,21 +42,18 @@ const DoctorDetail = () => {
           throw new Error(`HTTP error! status: ${response.status}, message: ${responseText}`);
         }
 
-        // Check if response is empty
         if (!responseText || responseText.trim() === '') {
           throw new Error('Empty response from server');
         }
 
         let doctorData;
         try {
-          // Try to parse JSON
           doctorData = JSON.parse(responseText);
           console.log('Parsed doctor data:', doctorData);
         } catch (parseError) {
           console.error('JSON parse error:', parseError);
           console.error('Invalid JSON response:', responseText);
           
-          // Handle non-JSON responses
           if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
             throw new Error('Server returned HTML error page');
           } else {
@@ -86,13 +81,13 @@ const DoctorDetail = () => {
     }
   }, [doctorId]);
 
-  //Fetch schedule doctor
+  // Fetch schedule doctor
   useEffect(() => {
     const fetchSchedule = async () => {
       if (!doctorId) return;
 
       try {
-        setScheduleLoading(true); // SỬA: đã sửa chính tả
+        setScheduleLoading(true);
         const token = localStorage.getItem('token');
         
         if (!token) {
@@ -122,19 +117,21 @@ const DoctorDetail = () => {
         setSchedule(scheduleData);
       } catch (err) {
         console.error('Error fetching schedule:', err);
-        // Không set error chính vì schedule là thông tin phụ
       } finally {
-        setScheduleLoading(false); // SỬA: đã sửa chính tả
+        setScheduleLoading(false);
       }
     };
 
     fetchSchedule();
   }, [doctorId]);
 
-  // Generate calendar days for display (static data)
+  // Hàm tạo ngày chính xác (fix múi giờ)
   const generateCalendarDays = () => {
     const days = [];
     const today = new Date();
+    
+    // Đặt thời gian về 0:00:00 để tránh lỗi múi giờ
+    today.setHours(0, 0, 0, 0);
     
     // Tạo 7 ngày tiếp theo
     for (let i = 0; i < 7; i++) {
@@ -146,40 +143,49 @@ const DoctorDetail = () => {
     return days;
   };
 
-  // Generate sample time slots for display
+  // Hàm chuyển đổi ngày sang string format YYYY-MM-DD (fix múi giờ)
+  const formatDateToAPI = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Hàm chuyển đổi ngày sang string format YYYY-MM-DD (cho URL)
+  const formatDateForURL = (date) => {
+    return formatDateToAPI(date);
+  };
+
+  // Generate time slots for display
   const generateTimeSlots = (date) => {
-    if (!schedule || !schedule.startTime) { // SỬA: thêm điều kiện check schedule.startTime
-      return generateSampleTimeSlots(); // Fallback nếu không có schedule
+    if (!schedule || !schedule.startTime) {
+      return generateSampleTimeSlots();
     }
 
     const slots = [];
-    const startTime = schedule.startTime; // "08:00:00"
-    const endTime = schedule.endTime; // "12:00:00"
-    const slotDuration = schedule.slotDuration || 30; // 30 phút
+    const startTime = schedule.startTime;
+    const endTime = schedule.endTime;
+    const slotDuration = schedule.slotDuration || 30;
 
-    // Chuyển đổi thời gian từ string sang số
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
 
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
 
-    // Kiểm tra ngày hiện tại có phải là ngày làm việc không
     const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const currentDay = dayNames[date.getDay()];
     const workingDays = schedule.workingDays?.split(',') || [];
 
     if (!workingDays.includes(currentDay)) {
-      return []; // Không có khung giờ nếu không làm việc
+      return [];
     }
 
-    // Tạo các khung giờ
     for (let time = startTotalMinutes; time < endTotalMinutes; time += slotDuration) {
       const hour = Math.floor(time / 60);
       const minute = time % 60;
       const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
       
-      // Kiểm tra xem khung giờ này đã được đặt chưa
       const isBooked = isTimeSlotBooked(date, timeString);
       
       slots.push({
@@ -195,11 +201,11 @@ const DoctorDetail = () => {
   const isTimeSlotBooked = (date, timeString) => {
     if (!schedule || !schedule.appointments) return false;
 
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatDateToAPI(date);
     
     return schedule.appointments.some(appointment => {
       const isSameDate = appointment.appointmentDate === dateString;
-      const isSameTime = appointment.appointmentStart.substring(0, 5) === timeString;
+      const isSameTime = appointment.appointmentStart?.substring(0, 5) === timeString;
       const isActiveStatus = appointment.status === 'PENDING' || appointment.status === 'CONFIRMED';
       
       return isSameDate && isSameTime && isActiveStatus;
@@ -224,20 +230,31 @@ const DoctorDetail = () => {
     return slots;
   };
 
-  // Format date for display
-  const formatDate = (date) => {
+  // Format date for display (chỉ hiển thị)
+  const formatDateForDisplay = (date) => {
     const options = { weekday: 'short', day: 'numeric', month: 'short' };
     return date.toLocaleDateString('vi-VN', options);
   };
 
-  // Handle book appointment với validation
+  // Kiểm tra xem ngày có phải là hôm nay không
+  const isToday = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return today.getTime() === compareDate.getTime();
+  };
+
+  // Handle book appointment với date chính xác
   const handleBookAppointment = (date, time, available) => {
     if (!available) {
       alert('Khung giờ này đã được đặt. Vui lòng chọn khung giờ khác.');
       return;
     }
 
-    const dateString = date.toISOString().split('T')[0];
+    // Sử dụng hàm formatDateForURL để đảm bảo ngày chính xác
+    const dateString = formatDateForURL(date);
+    console.log('Booking with date:', dateString, 'time:', time);
     navigate(`/booking?doctorId=${doctorId}&date=${dateString}&time=${time}`);
   };
 
@@ -380,7 +397,6 @@ const DoctorDetail = () => {
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Clock4 size={18} className="text-blue-500" />
-                  {/* Hiển thị lịch làm việc thực tế */}
                   <span>
                     Làm việc: {formatWorkingDays()} • 
                     {schedule 
@@ -410,7 +426,6 @@ const DoctorDetail = () => {
                 <h2 className="text-xl font-bold text-gray-800">Lịch làm việc</h2>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Clock size={16} />
-                  {/* Hiển thị thời gian mỗi lượt khám thực tế */}
                   <span>
                     Mỗi lượt khám: {schedule?.slotDuration || 30} phút
                   </span>
@@ -431,21 +446,27 @@ const DoctorDetail = () => {
                   const currentDay = dayNames[date.getDay()];
                   const workingDays = schedule?.workingDays?.split(',') || [];
                   const isWorkingDay = workingDays.includes(currentDay);
+                  const today = isToday(date);
 
                   return (
                     <div
                       key={index}
                       className={`text-center p-3 rounded-lg border ${
-                        isWorkingDay 
-                          ? 'border-blue-200 bg-blue-50 text-blue-700' 
-                          : 'border-gray-200 bg-gray-100 text-gray-400'
+                        today 
+                          ? 'border-blue-500 bg-blue-100 text-blue-800 font-semibold' 
+                          : isWorkingDay 
+                            ? 'border-blue-200 bg-blue-50 text-blue-700' 
+                            : 'border-gray-200 bg-gray-100 text-gray-400'
                       }`}
                     >
-                      <div className="font-semibold">{formatDate(date)}</div>
+                      <div className="font-semibold">{formatDateForDisplay(date)}</div>
                       <div className="text-sm opacity-75">
                         {date.toLocaleDateString('vi-VN', { day: 'numeric' })}
                       </div>
-                      {!isWorkingDay && (
+                      {today && (
+                        <div className="text-xs mt-1 text-blue-600">Hôm nay</div>
+                      )}
+                      {!isWorkingDay && !today && (
                         <div className="text-xs mt-1">Nghỉ</div>
                       )}
                     </div>
@@ -453,23 +474,23 @@ const DoctorDetail = () => {
                 })}
               </div>
 
-              {/* Time Slots Grid - Dữ liệu thực tế từ API */}
+              {/* Time Slots Grid */}
               {!scheduleLoading && (
                 <div className="space-y-4">
                   {calendarDays.map((date, dayIndex) => {
-                    const isToday = date.toDateString() === new Date().toDateString();
+                    const today = isToday(date);
                     const timeSlots = generateTimeSlots(date);
                     const availableSlots = timeSlots.filter(slot => slot.available);
                     
                     return (
                       <div key={dayIndex} className="border border-gray-200 rounded-lg">
                         <div className={`p-3 border-b ${
-                          isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                          today ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
                         }`}>
                           <div className="flex items-center justify-between">
                             <div className="font-semibold text-gray-800">
-                              {formatDate(date)}
-                              {isToday && <span className="ml-2 text-blue-600 text-sm">(Hôm nay)</span>}
+                              {formatDateForDisplay(date)}
+                              {today && <span className="ml-2 text-blue-600 text-sm">(Hôm nay)</span>}
                             </div>
                             <div className="text-sm text-gray-500">
                               {availableSlots.length} lượt khám có sẵn
@@ -541,7 +562,6 @@ const DoctorDetail = () => {
                     <span>{doctor.address}, {doctor.district}, {doctor.city}</span>
                   </div>
                   
-                  {/* Hiển thị thông tin giờ làm việc thực tế */}
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock size={16} className="text-blue-500" />
                     <span>

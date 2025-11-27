@@ -48,9 +48,7 @@ return (
         {isLoggedIn && (
         <div className="flex justify-end items-center py-2">
           <div className="flex items-center gap-4">
-            <button className="text-white hover:text-gray-200 transition-colors">
-              <Bell size={20} />
-            </button>
+           
             
             <div className="relative">
               <button 
@@ -70,12 +68,7 @@ return (
                   >
                     Thông tin cá nhân
                   </Link>
-                  <Link 
-                    to="/profile/history" 
-                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100"
-                  >
-                    Lịch sử khám
-                  </Link>
+                  
                   <button 
                     className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100"
                     onClick={handleLogout}

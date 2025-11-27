@@ -29,12 +29,14 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PatientResponse> getById(@PathVariable String id) {
+    public ResponseEntity<?> getById(@PathVariable String id) {
         try {
-            return patientService.getPatientById(id)
-                    .map(patientService::toResponse)
-                    .map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
+            PatientResponse patient = patientService.getPatientById(id);
+            return ResponseEntity.ok(patient);
+//            return patientService.getPatientById(id)
+//                    .map(patientService::toResponse)
+//                    .map(ResponseEntity::ok)
+//                    .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
             logger.error("Error fetching patient with id {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

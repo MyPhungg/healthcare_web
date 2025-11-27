@@ -49,7 +49,7 @@ CREATE TABLE doctor (
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
 INSERT INTO user (user_id, username, email, phone, password, role)
 VALUES
-    ('user48291035', 'alice.p', 'alice.p@email.com', '0901111111', '123456', 'PATIENT'),
+    ('user48291035', 'alice.p', 'alice.p@email.com', '0901111111', '$2a$12$EH.ovtMuL77HkdJwDPZkbObH2/qd7vz6wdBZc7V4NWyqvjj3IhQre', 'PATIENT'),
     ('user73918204', 'bob.d', 'bob.d@email.com', '0902222222', '123456', 'DOCTOR'),
     ('user28491763', 'charlie.a', 'charlie.a@email.com', '0903333333', '123456', 'ADMIN'),
     ('user59102847', 'david.p', 'david.p@email.com', '0904444444', '123456', 'PATIENT'),

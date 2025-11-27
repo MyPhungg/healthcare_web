@@ -82,9 +82,9 @@ public class AppointmentService {
         appointmentRepository.save(app);
 
         PatientResponse patient = patientClient.getById(patientId).getBody();
-        String userId = patient.getUser().getUserId();
-//        UserResponse user = userClient.getUserById(userId);
-        String userEmail = patient.getUser().getEmail();
+        String userId = patient.getUserId();
+        UserResponse user = userClient.getUserById(userId);
+        String userEmail = user.getEmail();
         NotificationEvent event = new NotificationEvent(
                 "APPOINTMENT_CREATED",
                 "Cuộc hẹn mới đã được tạo thành công",
@@ -115,9 +115,9 @@ public class AppointmentService {
         appointmentRepository.save(oldApp);
 
         PatientResponse patient = patientClient.getById(oldApp.getPatientId()).getBody();
-        String userId = patient.getUser().getUserId();
-//        UserResponse user = userClient.getUserById(userId);
-        String userEmail = patient.getUser().getEmail();
+        String userId = patient.getUserId();
+        UserResponse user = userClient.getUserById(userId);
+        String userEmail = user.getEmail();
         NotificationEvent event = new NotificationEvent(
                 "APPOINTMENT_CANCELLED",
                 "Cuộc hẹn đã được hủy thành công",

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class PatientResponse {
+    private String userId;
     private String patientId;
     private String fullName;
     private String gender;
@@ -23,19 +24,5 @@ public class PatientResponse {
     private String profileImg;
     private String coverImg;
 
-    private UserInfo user;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class UserInfo {
-        private String userId;
-        private String username;
-        private String email;
-        private String phone;
-        private String role;
-        private String provider;
-    }
 }
 

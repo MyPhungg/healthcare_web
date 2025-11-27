@@ -18,38 +18,66 @@ Dự án **HEALTHCARE_WEB** là ứng dụng liên kết giữa các bác sĩ v�
 
 ## Công nghệ sử dụng
 
-- **Backend**: Java, Spring Boot
-- **Frontend**: React, Vite
-- **Cơ sở dữ liệu**: MySQL
-- **Containerization**: Docker, Docker Compose
+### Backend
+- **Java 21**
+- **Spring Boot** – Xây dựng các service backend và REST API.
+- **Spring Cloud** – Hỗ trợ kiến trúc Microservices.
+
+### Service Discovery
+- **Eureka Server** – Đăng ký và phát hiện service trong hệ thống phân tán.
+
+### API Gateway
+- **Spring Cloud Gateway** – Điều phối request, định tuyến service, xử lý load balancing & filter.
+
+### Messaging
+- **Apache Kafka** – Giao tiếp bất đồng bộ giữa các service (publish/subcribe, event-driven).
+
+### Database
+- **MySQL** – Lưu trữ dữ liệu quan hệ cho từng service.
+
+### Reporting
+- **Jasper Reports** – Tạo báo cáo PDF/Excel từ dữ liệu hệ thống.
+
+### Email Service
+- **Spring Boot Email (JavaMailSender)** – Gửi email thông báo tự động.
+
+### Frontend
+- **ReactJS** – Xây dựng giao diện người dùng hiện đại, SPA.
+
+### DevOps & Tools
+- **Docker** – Đóng gói và triển khai microservices.
+- **Maven** – Quản lý dependency và build dự án.
+- **Git** – Quản lý mã nguồn.
+- **Postman** – Kiểm thử API và debug request/response.
+
 
 ---
 
 ## Cấu trúc dự án
 
 ```bash
-HEALTHCARE_WEB/
+healthcare_web/
+├── backend/                # Mã nguồn backend (Spring Boot - backend-parent)
+│   ├── appointment_service/
+│   ├── user_service/
+│   ├── notification_service/
+│   ├── gateway_service/
+│   └── eureka_server/
 │
-├─ backend/
-│ ├─ appointment_service/
-│ ├─ user_service/
-│ ├─ gateway_service/
-│ └─ common/
+├── frontend/               # Mã nguồn frontend (React)
+│   ├── public/
+│   └── src/
 │
-├─ db/
-│ ├─ init.sql
-│ ├─ appointment_service_db.sql
-│ └─ user_service_db.sql
+├── db/                     # Cấu hình database, script SQL
 │
-├─ frontend/healthcare-app/
-│ ├─ node_modules/
-│ ├─ public/
-│ ├─ src/
-│ ├─ Dockerfile
-│ ├─ package.json
-│ └─ vite.config.js
+├── uploads/                # Lưu file upload (ảnh, tài liệu, ...)
 │
-└─ docker-compose.yml
+├── node_modules/           # Thư viện frontend (tự động tạo bởi npm/yarn)
+│
+├── .env                    # Biến môi trường hệ thống
+├── .gitignore
+└── docker-compose.yml      # Orchestration cho toàn bộ microservices
+
 ```
 
 - **backend/**: Chứa các microservice Java.

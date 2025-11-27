@@ -1,6 +1,5 @@
 package com.healthcare.user_service.service;
 
-import com.healthcare.user_service.entity.Gender;
 import com.healthcare.user_service.entity.Patient;
 import com.healthcare.user_service.entity.User;
 import com.healthcare.user_service.dto.PatientResponse;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -32,9 +30,14 @@ public class PatientService {
         return patientRepository.findAll();
     }
 
-    public Optional<Patient> getPatientById(String patientId) {
-        return patientRepository.findById(patientId);
-    }
+//    public Optional<Patient> getPatientById(String patientId) {
+//        return patientRepository.findById(patientId);
+//    }
+public PatientResponse getPatientById(String id) {
+    Patient patient = patientRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Patient not found with id: " + id));
+    return toResponse(patient);
+}
 
     public Patient createPatient(String userId,
                                  String fullName,
@@ -116,30 +119,46 @@ public class PatientService {
     public void deletePatient(String patientId) {
         patientRepository.deleteById(patientId);
     }
-    public PatientResponse toResponse(Patient patient) {
-        return PatientResponse.builder()
-                .patientId(patient.getPatientId())
-                .fullName(patient.getFullName())
-                .gender(patient.getGender().name())
-                .dateOfBirth(patient.getDateOfBirth())
-                .address(patient.getAddress())
-                .district(patient.getDistrict())
-                .city(patient.getCity())
-                .insuranceNum(patient.getInsuranceNum())
-                .profileImg(patient.getProfileImg())
-                .coverImg(patient.getCoverImg())
-                .user(PatientResponse.UserInfo.builder()
-                        .userId(patient.getUser().getUserId())
-                        .email(patient.getUser().getEmail())
-                        .username(patient.getUser().getUsername())
-                        .role(patient.getUser().getRole().name())
-                        .provider(patient.getUser().getProvider().name())
-                        .build())
-                .build();
-    }
-    public Optional<Patient> getParientByUserId (String patientId){
-        return patientRepository.findByUser_UserId(patientId);
+//    public PatientResponse toResponse(Patient patient) {
+//        return PatientResponse.builder()
+//                .patientId(patient.getPatientId())
+//                .fullName(patient.getFullName())
+//                .gender(patient.getGender().name())
+//                .dateOfBirth(patient.getDateOfBirth())
+//                .address(patient.getAddress())
+//                .district(patient.getDistrict())
+//                .city(patient.getCity())
+//                .insuranceNum(patient.getInsuranceNum())
+//                .profileImg(patient.getProfileImg())
+//                .coverImg(patient.getCoverImg())
+////                .user(PatientResponse.UserInfo.builder()
+////                        .userId(patient.getUser().getUserId())
+////                        .email(patient.getUser().getEmail())
+////                        .username(patient.getUser().getUsername())
+////                        .role(patient.getUser().getRole().name())
+////                        .provider(patient.getUser().getProvider().name())
+////                        .build())
+//                .build();
+//    }
+    public Optional<Patient> getParientByUserId (String userId){
+        return patientRepository.findByUserId(userId);
     }
 
+
+    public PatientResponse toResponse(Patient patient) {
+        PatientResponse response = new PatientResponse();
+        response.setUserId(patient.getUserId());
+        response.setPatientId(patient.getPatientId());
+        response.setFullName(patient.getFullName());
+        response.setGender(String.valueOf(patient.getGender()));
+        response.setDateOfBirth(patient.getDateOfBirth());
+        response.setAddress(patient.getAddress());
+        response.setDistrict(patient.getDistrict());
+        response.setCity(patient.getCity());
+        response.setInsuranceNum(patient.getInsuranceNum());
+        response.setProfileImg(patient.getProfileImg());
+        response.setCoverImg(patient.getCoverImg());
+        return response;
+    }
 }
 

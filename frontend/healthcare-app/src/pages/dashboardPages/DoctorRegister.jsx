@@ -118,6 +118,29 @@ const DoctorRegister = () => {
     return newErrors;
   };
 
+  // Format date từ yyyy-mm-dd sang định dạng backend
+  const formatDateForBackend = (dateString) => {
+    if (!dateString) return '';
+    // Nếu đã là định dạng yyyy-mm-dd thì giữ nguyên
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString;
+    }
+    return dateString;
+  };
+
+  // Convert gender từ MALE/FEMALE sang English (giữ nguyên vì đã đúng)
+  const convertGenderToEnglish = (gender) => {
+    const genderMap = {
+      'MALE': 'MALE',
+      'FEMALE': 'FEMALE',
+      'nam': 'MALE',
+      'nữ': 'FEMALE',
+      'male': 'MALE',
+      'female': 'FEMALE'
+    };
+    return genderMap[gender] || 'OTHER';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -137,47 +160,93 @@ const DoctorRegister = () => {
         throw new Error('Không tìm thấy thông tin xác thực');
       }
 
-      // Chuẩn bị data để gửi lên API
-      const doctorData = {
-        userId: userId,
-        fullName: formData.fullName,
-        gender: formData.gender,
-        dateOfBirth: formData.dateOfBirth,
-        address: formData.address,
-        district: formData.district,
-        city: formData.city,
-        specialityId: formData.specialityId,
-        clinicName: formData.clinicName,
-        clinicDescription: formData.clinicDescription,
-        bio: formData.bio,
-        profileImg: formData.profileImg,
-        coverImg: formData.coverImg
-      };
+      console.log('🔄 Bắt đầu tạo hồ sơ bác sĩ...');
+      console.log('👤 UserId:', userId);
+      console.log('📦 FormData:', formData);
 
-      console.log('Gửi dữ liệu bác sĩ:', doctorData);
+      // Tạo FormData object thay vì JSON
+      const formDataToSend = new FormData();
+      
+      // Thêm tất cả các trường vào FormData
+      formDataToSend.append('userId', userId);
+      formDataToSend.append('fullName', formData.fullName);
+      formDataToSend.append('gender', convertGenderToEnglish(formData.gender));
+      formDataToSend.append('dateOfBirth', formatDateForBackend(formData.dateOfBirth));
+      formDataToSend.append('address', formData.address);
+      formDataToSend.append('district', formData.district);
+      formDataToSend.append('city', formData.city);
+      formDataToSend.append('specialityId', formData.specialityId);
+      formDataToSend.append('clinicName', formData.clinicName);
+      formDataToSend.append('clinicDescription', formData.clinicDescription);
+      formDataToSend.append('bio', formData.bio);
+
+      // Thêm file ảnh - QUAN TRỌNG: phải có cả hai file
+      if (formData.profileImg && formData.profileImg instanceof File) {
+        formDataToSend.append('profileImg', formData.profileImg);
+        console.log('✅ Đã thêm profileImg:', formData.profileImg.name);
+      } else {
+        // Tạo file rỗng nếu không có
+        const emptyFile = new File([''], 'empty.txt', { type: 'text/plain' });
+        formDataToSend.append('profileImg', emptyFile);
+        console.log('⚠️ Thêm profileImg rỗng');
+      }
+
+      if (formData.coverImg && formData.coverImg instanceof File) {
+        formDataToSend.append('coverImg', formData.coverImg);
+        console.log('✅ Đã thêm coverImg:', formData.coverImg.name);
+      } else {
+        // Tạo file rỗng nếu không có
+        const emptyFile = new File([''], 'empty.txt', { type: 'text/plain' });
+        formDataToSend.append('coverImg', emptyFile);
+        console.log('⚠️ Thêm coverImg rỗng');
+      }
+
+      // Debug: kiểm tra FormData contents
+      console.log('🔍 FormData contents:');
+      for (let pair of formDataToSend.entries()) {
+        console.log('  ', pair[0] + ':', pair[1]);
+      }
 
       const response = await fetch('http://localhost:8082/api/doctors', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          // KHÔNG đặt Content-Type khi dùng FormData - browser sẽ tự động thêm boundary
         },
-        body: JSON.stringify(doctorData)
+        body: formDataToSend
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Tạo hồ sơ bác sĩ thất bại: ${response.status} - ${errorData}`);
+        let errorDetail = '';
+        try {
+          errorDetail = await response.text();
+          console.error('❌ Backend error response:', errorDetail);
+        } catch (textError) {
+          console.error('❌ Cannot read error text:', textError);
+        }
+        
+        if (response.status === 400) {
+          throw new Error(`Lỗi dữ liệu: ${errorDetail}`);
+        } else if (response.status === 401) {
+          throw new Error('Không có quyền truy cập. Vui lòng đăng nhập lại.');
+        } else if (response.status === 500) {
+          throw new Error('Lỗi server. Vui lòng thử lại sau.');
+        } else {
+          throw new Error(`Tạo hồ sơ bác sĩ thất bại: ${response.status} - ${errorDetail}`);
+        }
       }
 
       const result = await response.json();
-      console.log('Tạo hồ sơ bác sĩ thành công:', result);
+      console.log('✅ Tạo hồ sơ bác sĩ thành công:', result);
 
       // Chuyển hướng đến trang bác sĩ sau khi thành công
       navigate('/doctor');
 
     } catch (error) {
-      console.error('Lỗi tạo hồ sơ bác sĩ:', error);
+      console.error('💥 Lỗi tạo hồ sơ bác sĩ:', error);
       setErrors({ submit: error.message || 'Có lỗi xảy ra khi tạo hồ sơ bác sĩ' });
     } finally {
       setIsLoading(false);
@@ -250,7 +319,7 @@ const DoctorRegister = () => {
                   <option value="">Chọn chuyên khoa</option>
                   {specialities.map(spec => (
                     <option key={spec.specialityId} value={spec.specialityId}>
-                      {spec.name}
+                      {spec.specialityName || spec.name}
                     </option>
                   ))}
                 </select>
@@ -350,11 +419,11 @@ const DoctorRegister = () => {
               </div>
             </div>
 
-            {/* Upload ảnh (tùy chọn) */}
+            {/* Upload ảnh */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ảnh đại diện
+                  Ảnh đại diện *
                 </label>
                 <input
                   type="file"
@@ -362,12 +431,14 @@ const DoctorRegister = () => {
                   onChange={handleInputChange}
                   accept="image/*"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                  required
                 />
+                <p className="text-sm text-gray-500 mt-1">* Bắt buộc (có thể upload file rỗng)</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ảnh bìa
+                  Ảnh bìa *
                 </label>
                 <input
                   type="file"
@@ -375,7 +446,9 @@ const DoctorRegister = () => {
                   onChange={handleInputChange}
                   accept="image/*"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                  required
                 />
+                <p className="text-sm text-gray-500 mt-1">* Bắt buộc (có thể upload file rỗng)</p>
               </div>
             </div>
 

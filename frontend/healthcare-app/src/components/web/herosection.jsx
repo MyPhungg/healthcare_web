@@ -28,27 +28,20 @@ const HeroSection = () => {
       });
 
       if (response.ok) {
-        const rawText = await response.text();
-        let validJson = rawText;
-        const firstArrayEnd = rawText.indexOf('][');
-        if (firstArrayEnd !== -1) {
-          validJson = rawText.substring(0, firstArrayEnd + 1);
-        }
-        const data = JSON.parse(validJson);
+        const data = await response.json();
+        console.log('Specialties data:', data);
         setSpecialties(data);
+      } else {
+        throw new Error('Failed to fetch specialties');
       }
     } catch (error) {
       console.error('Error fetching specialties:', error);
-      // Fallback data
       setSpecialties([
-        { specialityId: 1, name: 'Tim mạch' },
-        { specialityId: 2, name: 'Thần kinh' },
-        { specialityId: 3, name: 'Chấn thương chỉnh hình' },
-        { specialityId: 4, name: 'Nhi khoa' },
-        { specialityId: 5, name: 'Da liễu' },
-        { specialityId: 6, name: 'Tai - Mũi - Họng' },
-        { specialityId: 7, name: 'Răng - Hàm - Mặt' },
-        { specialityId: 8, name: 'Xương khớp' },
+        { specialityId: 'spec00000001', name: 'Nhi Khoa' },
+        { specialityId: 'spec00000002', name: 'Nội tổng quát' },
+        { specialityId: 'spec00000003', name: 'Răng Hàm Mặt' },
+        { specialityId: 'spec00000004', name: 'Da Liễu' },
+        { specialityId: 'spec00000005', name: 'Sản Phụ Khoa' },
       ]);
     }
   };
@@ -71,20 +64,21 @@ const HeroSection = () => {
       });
 
       if (response.ok) {
-        const rawText = await response.text();
-        let validJson = rawText;
-        const firstArrayEnd = rawText.indexOf('][');
-        if (firstArrayEnd !== -1) {
-          validJson = rawText.substring(0, firstArrayEnd + 1);
-        }
-        const doctors = JSON.parse(validJson);
+        const doctors = await response.json();
         
         const queryLower = query.toLowerCase();
-        const filtered = doctors.filter(doctor =>
-          doctor.fullName?.toLowerCase().includes(queryLower) ||
-          doctor.speciality?.name.toLowerCase().includes(queryLower) ||
-          doctor.clinicName?.toLowerCase().includes(queryLower)
-        ).slice(0, 5); // Giới hạn 5 suggestions
+        const filtered = doctors.filter(doctor => {
+          const doctorSpecialty = specialties.find(spec => 
+            spec.specialityId === doctor.specialityId
+          );
+          const specialtyName = doctorSpecialty ? doctorSpecialty.name.toLowerCase() : '';
+
+          return (
+            doctor.fullName?.toLowerCase().includes(queryLower) ||
+            specialtyName.includes(queryLower) ||
+            doctor.clinicName?.toLowerCase().includes(queryLower)
+          );
+        }).slice(0, 5);
 
         setSuggestions(filtered);
       }
@@ -103,35 +97,19 @@ const HeroSection = () => {
   const handleSuggestionClick = (doctor) => {
     setSearchQuery(doctor.fullName || '');
     setSuggestions([]);
-    // Có thể điều hướng đến trang chi tiết bác sĩ
     navigate(`/doctordetail/${doctor.doctorId}`);
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     
-    if (!searchQuery.trim() && !specialty && !location) {
-      return;
-    }
-
     setLoading(true);
 
     try {
       const token = localStorage.getItem('token');
-      let url = 'http://localhost:8082/api/doctors?';
-      const params = new URLSearchParams();
-
-      if (searchQuery.trim()) {
-        params.append('search', searchQuery.trim());
-      }
-      if (specialty) {
-        params.append('specialty', specialty);
-      }
-      if (location) {
-        params.append('location', location);
-      }
-
-      const response = await fetch(url + params.toString(), {
+      
+      // Lấy tất cả doctors trước
+      const response = await fetch('http://localhost:8082/api/doctors', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -140,23 +118,64 @@ const HeroSection = () => {
       });
 
       if (response.ok) {
-        const rawText = await response.text();
-        let validJson = rawText;
-        const firstArrayEnd = rawText.indexOf('][');
-        if (firstArrayEnd !== -1) {
-          validJson = rawText.substring(0, firstArrayEnd + 1);
+        let doctors = await response.json();
+        
+        // Filter dữ liệu trên client side
+        if (searchQuery.trim()) {
+          const queryLower = searchQuery.toLowerCase();
+          doctors = doctors.filter(doctor => {
+            const doctorSpecialty = specialties.find(spec => 
+              spec.specialityId === doctor.specialityId
+            );
+            const specialtyName = doctorSpecialty ? doctorSpecialty.name.toLowerCase() : '';
+
+            return (
+              doctor.fullName?.toLowerCase().includes(queryLower) ||
+              specialtyName.includes(queryLower) ||
+              doctor.clinicName?.toLowerCase().includes(queryLower)
+            );
+          });
         }
-        const searchResults = JSON.parse(validJson);
+
+        // Filter theo chuyên khoa
+        if (specialty) {
+          doctors = doctors.filter(doctor => doctor.specialityId === specialty);
+        }
+
+        // Filter theo location
+        if (location) {
+          const locationMap = {
+            'hanoi': ['Hà Nội', 'Ha Noi', 'hanoi'],
+            'hcm': ['Hồ Chí Minh', 'Ho Chi Minh', 'TPHCM', 'TP. Hồ Chí Minh'],
+            'danang': ['Đà Nẵng', 'Da Nang'],
+            'cantho': ['Cần Thơ', 'Can Tho'],
+            'haiphong': ['Hải Phòng', 'Hai Phong']
+          };
+
+          const locationKeywords = locationMap[location] || [location];
+          doctors = doctors.filter(doctor => {
+            const doctorLocation = `${doctor.city} ${doctor.district} ${doctor.address}`.toLowerCase();
+            return locationKeywords.some(keyword => 
+              doctorLocation.includes(keyword.toLowerCase())
+            );
+          });
+        }
+
+        console.log('Filtered doctors:', doctors);
         
         // Điều hướng đến trang kết quả tìm kiếm
         navigate('/search-results', {
           state: {
-            results: searchResults,
-            searchParams: { searchQuery, location, specialty }
+            results: doctors,
+            searchParams: { 
+              searchQuery, 
+              location, 
+              specialty: specialties.find(spec => spec.specialityId === specialty)?.name || specialty 
+            }
           }
         });
       } else {
-        throw new Error('Search failed');
+        throw new Error('Failed to fetch doctors');
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -166,11 +185,12 @@ const HeroSection = () => {
     }
   };
 
-  const handleQuickSearch = (quickSpecialty) => {
-    setSpecialty(quickSpecialty);
+  const handleQuickSearch = (quickSpecialtyId) => {
+    setSpecialty(quickSpecialtyId);
+    setSearchQuery('');
     // Tự động tìm kiếm khi chọn quick search
     setTimeout(() => {
-      document.querySelector('form').requestSubmit();
+      handleSearch(new Event('submit'));
     }, 100);
   };
 
@@ -179,6 +199,12 @@ const HeroSection = () => {
     setLocation('');
     setSpecialty('');
     setSuggestions([]);
+  };
+
+  // Lấy tên chuyên khoa để hiển thị trong suggestions
+  const getSpecialtyName = (specialityId) => {
+    const spec = specialties.find(s => s.specialityId === specialityId);
+    return spec ? spec.name : 'Chưa cập nhật';
   };
 
   return (
@@ -191,11 +217,11 @@ const HeroSection = () => {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center text-white mb-8">
-          <h1 className="text-5xl font-bold mb-4 animate-fade-in">Xin chào!</h1>
-          <h2 className="text-4xl font-bold mb-2 animate-fade-in delay-100">
+          <h1 className="text-5xl font-bold mb-4">Xin chào!</h1>
+          <h2 className="text-4xl font-bold mb-2">
             Đây là HealthcareVippro,
           </h2>
-          <p className="text-3xl font-light animate-fade-in delay-200">
+          <p className="text-3xl font-light">
             Nơi sức khỏe của bạn sẽ luôn được tôn trọng.
           </p>
         </div>
@@ -215,7 +241,7 @@ const HeroSection = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full p-3 transition-colors disabled:opacity-50"
+                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full p-3 transition-colors duration-200 disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -232,7 +258,7 @@ const HeroSection = () => {
                   <div
                     key={doctor.doctorId}
                     onClick={() => handleSuggestionClick(doctor)}
-                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 transition-colors duration-150"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -241,7 +267,7 @@ const HeroSection = () => {
                       <div className="flex-1">
                         <p className="font-semibold text-gray-800">{doctor.fullName}</p>
                         <p className="text-sm text-gray-600">
-                          {doctor.speciality?.name} • {doctor.clinicName}
+                          {getSpecialtyName(doctor.specialityId)} • {doctor.clinicName}
                         </p>
                       </div>
                     </div>
@@ -259,7 +285,7 @@ const HeroSection = () => {
               <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white text-gray-700 font-medium outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer appearance-none"
+                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white text-gray-700 font-medium outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer appearance-none transition-all duration-200"
               >
                 <option value="">Tất cả địa điểm</option>
                 <option value="hanoi">Hà Nội</option>
@@ -276,11 +302,11 @@ const HeroSection = () => {
               <select
                 value={specialty}
                 onChange={(e) => setSpecialty(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white text-gray-700 font-medium outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer appearance-none"
+                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white text-gray-700 font-medium outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer appearance-none transition-all duration-200"
               >
                 <option value="">Tất cả chuyên khoa</option>
                 {specialties.map((spec) => (
-                  <option key={spec.specialityId} value={spec.name}>
+                  <option key={spec.specialityId} value={spec.specialityId}>
                     {spec.name}
                   </option>
                 ))}
@@ -292,7 +318,7 @@ const HeroSection = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? (
                   <>
@@ -311,7 +337,7 @@ const HeroSection = () => {
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all"
+                  className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all duration-200"
                 >
                   Xóa
                 </button>
@@ -320,7 +346,7 @@ const HeroSection = () => {
           </div>
         </form>
 
-        
+      
         {/* Search Stats */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-white opacity-90">
           <div>
@@ -328,7 +354,7 @@ const HeroSection = () => {
             <div className="text-sm">Bác sĩ chuyên khoa</div>
           </div>
           <div>
-            <div className="text-2xl font-bold">50+</div>
+            <div className="text-2xl font-bold">{specialties.length}+</div>
             <div className="text-sm">Chuyên khoa</div>
           </div>
           <div>
@@ -337,19 +363,6 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-
-      {/* CSS Animation */}
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out forwards;
-        }
-        .delay-100 { animation-delay: 0.1s; opacity: 0; }
-        .delay-200 { animation-delay: 0.2s; opacity: 0; }
-      `}</style>
     </div>
   );
 };

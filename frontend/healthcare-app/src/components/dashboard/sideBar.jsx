@@ -73,7 +73,7 @@ const Sidebar = ({ userRole = 'admin' }) => {
     { icon: User, label: 'Thông tin cá nhân', path: '/doctor/profile' },
     { icon: Clock, label: 'Lịch làm việc', path: '/doctor/schedule' },
     { icon: Calendar, label: 'Quản lý lịch hẹn', path: '/doctor/appointments' },
-    { icon: Users, label: 'Bệnh nhân', path: '/doctor/patients' },
+    
   ];
 
   const menuItems = userRole === 'admin' ? adminMenuItems : doctorMenuItems;

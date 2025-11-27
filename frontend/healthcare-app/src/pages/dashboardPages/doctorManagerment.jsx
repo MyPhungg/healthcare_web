@@ -19,7 +19,20 @@ const DoctorManagement = () => {
       setLoading(true);
       setError(null);
       const doctorsData = await DoctorService.getAllDoctors();
-      setDoctors(doctorsData);
+      
+      // Thêm các trường mặc định cho dữ liệu thiếu
+      const enhancedDoctors = doctorsData.map(doctor => ({
+        ...doctor,
+        email: doctor.email || 'Chưa cập nhật',
+        phone: doctor.phone || 'Chưa cập nhật',
+        isActive: doctor.isActive !== undefined ? doctor.isActive : true, // Mặc định là active
+        yearsOfExperience: doctor.yearsOfExperience || 0,
+        speciality: {
+          specialityName: doctor.specialityName || 'Chưa cập nhật'
+        }
+      }));
+      
+      setDoctors(enhancedDoctors);
     } catch (err) {
       setError('Không thể tải danh sách bác sĩ. Vui lòng thử lại.');
       console.error('Error fetching doctors:', err);
@@ -48,10 +61,11 @@ const DoctorManagement = () => {
     const matchesSearch = 
       doctor.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doctor.speciality?.specialityName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      doctor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.clinicName?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesSpecialty = specialtyFilter === 'all' || 
-      doctor.speciality?.specialityName === specialtyFilter;
+      doctor.specialityId === specialtyFilter;
     
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && doctor.isActive) ||
@@ -60,13 +74,12 @@ const DoctorManagement = () => {
     return matchesSearch && matchesSpecialty && matchesStatus;
   });
 
-  // Handle status change (frontend only - since no API for active/deactive)
+  // Handle status change
   const toggleDoctorStatus = async (doctorId, currentStatus) => {
     try {
       setActionLoading(doctorId);
       
-      // Since there's no API for active/deactive, we'll update locally
-      // In a real scenario, you might want to call updateDoctorProfile with the new status
+      // Update locally since there's no API for active/deactive
       setDoctors(prevDoctors => 
         prevDoctors.map(doctor => 
           doctor.doctorId === doctorId 
@@ -74,9 +87,6 @@ const DoctorManagement = () => {
             : doctor
         )
       );
-      
-      // Optional: If you want to persist the change, you can call updateDoctorProfile
-      // await DoctorService.updateDoctorProfile(doctorId, { isActive: !currentStatus });
       
     } catch (err) {
       setError('Không thể cập nhật trạng thái bác sĩ. Vui lòng thử lại.');
@@ -86,12 +96,12 @@ const DoctorManagement = () => {
     }
   };
 
-  // Handle delete doctor (frontend only)
+  // Handle delete doctor
   const deleteDoctor = async (doctorId) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bác sĩ này?')) {
       try {
         setActionLoading(doctorId);
-        // Since there's no delete API, we'll remove from frontend
+        // Remove from frontend
         setDoctors(prevDoctors => 
           prevDoctors.filter(doctor => doctor.doctorId !== doctorId)
         );
@@ -113,8 +123,18 @@ const DoctorManagement = () => {
 
   // Format experience text
   const getExperienceText = (yearsOfExperience) => {
-    if (!yearsOfExperience) return 'Chưa cập nhật';
+    if (!yearsOfExperience || yearsOfExperience === 0) return 'Chưa cập nhật';
     return `${yearsOfExperience} năm kinh nghiệm`;
+  };
+
+  // Format gender display
+  const getGenderDisplay = (gender) => {
+    const genderMap = {
+      'MALE': 'Nam',
+      'FEMALE': 'Nữ',
+      'OTHER': 'Khác'
+    };
+    return genderMap[gender] || 'Chưa cập nhật';
   };
 
   if (loading) {
@@ -170,7 +190,7 @@ const DoctorManagement = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, email hoặc chuyên khoa..."
+              placeholder="Tìm kiếm theo tên, email, phòng khám hoặc chuyên khoa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
@@ -183,7 +203,7 @@ const DoctorManagement = () => {
           >
             <option value="all">Tất cả chuyên khoa</option>
             {specialities.map(spec => (
-              <option key={spec.specialityId} value={spec.specialityName}>
+              <option key={spec.specialityId} value={spec.specialityId}>
                 {spec.specialityName}
               </option>
             ))}
@@ -210,7 +230,7 @@ const DoctorManagement = () => {
                 <th className="px-6 py-4 text-left">Bác sĩ</th>
                 <th className="px-6 py-4 text-left">Liên hệ</th>
                 <th className="px-6 py-4 text-left">Chuyên khoa</th>
-                <th className="px-6 py-4 text-left">Kinh nghiệm</th>
+                <th className="px-6 py-4 text-left">Phòng khám</th>
                 <th className="px-6 py-4 text-center">Trạng thái</th>
                 <th className="px-6 py-4 text-center">Thao tác</th>
               </tr>
@@ -241,7 +261,7 @@ const DoctorManagement = () => {
                             {doctor.fullName || 'Chưa cập nhật'}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {doctor.gender === 'MALE' ? 'Nam' : doctor.gender === 'FEMALE' ? 'Nữ' : 'Khác'}
+                            {getGenderDisplay(doctor.gender)}
                           </p>
                         </div>
                       </div>
@@ -249,10 +269,10 @@ const DoctorManagement = () => {
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         <p className="text-sm text-gray-700 flex items-center gap-1">
-                          <Mail size={14} /> {doctor.email || 'Chưa cập nhật'}
+                          <Mail size={14} /> {doctor.email}
                         </p>
                         <p className="text-sm text-gray-700 flex items-center gap-1">
-                          <Phone size={14} /> {doctor.phone || 'Chưa cập nhật'}
+                          <Phone size={14} /> {doctor.phone}
                         </p>
                       </div>
                     </td>
@@ -261,8 +281,11 @@ const DoctorManagement = () => {
                         {doctor.speciality?.specialityName || 'Chưa cập nhật'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
-                      {getExperienceText(doctor.yearsOfExperience)}
+                    <td className="px-6 py-4">
+                      <p className="font-medium text-gray-800">{doctor.clinicName || 'Chưa cập nhật'}</p>
+                      <p className="text-sm text-gray-500 truncate max-w-xs">
+                        {doctor.clinicDescription || 'Chưa có mô tả'}
+                      </p>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button

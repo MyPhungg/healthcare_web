@@ -46,6 +46,8 @@ class AppointmentService {
       throw error;
     }
   }
+
+  // Lấy appointments theo schedule
   static async getAppointmentsBySchedule(scheduleId) {
     try {
       const token = AuthService.getToken();
@@ -133,6 +135,60 @@ class AppointmentService {
     }
   }
 
+  // Lấy appointments theo doctor và date (MỚI)
+  static async getAppointmentsByDoctorAndDate(doctorId, date) {
+    try {
+      const token = AuthService.getToken();
+      console.log(`Fetching appointments for doctor ${doctorId} on date ${date}`);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/by-doctor-and-date?doctorId=${doctorId}&date=${date}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('Appointments by doctor and date response status:', response.status);
+
+      if (!response.ok) {
+        // Nếu API trả về 404 (không tìm thấy), trả về mảng rỗng thay vì lỗi
+        if (response.status === 404) {
+          console.log('No appointments found for this doctor and date');
+          return [];
+        }
+        
+        let errorMessage = 'Không thể lấy danh sách lịch hẹn theo bác sĩ và ngày';
+        try {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        } catch (textError) {
+          console.error('Cannot read error text:', textError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Appointments by doctor and date data received:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.warn('Non-JSON response:', text);
+        return [];
+      }
+
+    } catch (error) {
+      console.error('Error in getAppointmentsByDoctorAndDate:', error);
+      // Trả về mảng rỗng nếu có lỗi để không làm gián đoạn flow
+      return [];
+    }
+  }
+
   // Lấy appointments theo patient
   static async getAppointmentsByPatient(patientId) {
     try {
@@ -206,6 +262,7 @@ class AppointmentService {
     }
   }
 
+  // Thay đổi trạng thái appointment
   static async changeAppointmentStatus(appointmentId, status) {
     try {
       const token = AuthService.getToken();
@@ -249,6 +306,8 @@ class AppointmentService {
       throw error;
     }
   }
+
+  // Các method shortcut cho các trạng thái phổ biến
   static async confirmAppointment(appointmentId) {
     return this.changeAppointmentStatus(appointmentId, 'CONFIRMED');
   }
@@ -264,8 +323,6 @@ class AppointmentService {
   static async pendingAppointment(appointmentId) {
     return this.changeAppointmentStatus(appointmentId, 'PENDING');
   }
-
-  // ... các method khác giữ nguyên ...
 
   // Format status với đầy đủ các trạng thái
   static formatStatus(status) {
@@ -362,15 +419,38 @@ class AppointmentService {
     return timeString.slice(0, 5); // Lấy HH:MM
   }
 
-  // Format status
-  static formatStatus(status) {
-    const statusMap = {
-      'PENDING': 'pending',
-      'CONFIRMED': 'confirmed', 
-      'COMPLETED': 'completed',
-      'CANCELLED': 'cancelled'
-    };
-    return statusMap[status] || status.toLowerCase();
+  // Kiểm tra time slot có available không (MỚI)
+  static isTimeSlotAvailable(timeSlot, bookedAppointments) {
+    if (!bookedAppointments || !Array.isArray(bookedAppointments)) {
+      return true;
+    }
+    
+    return !bookedAppointments.some(appointment => {
+      const appointmentTime = appointment.appointmentStart?.substring(0, 5); // Lấy HH:mm
+      return appointmentTime === timeSlot && appointment.status !== 'CANCELLED';
+    });
+  }
+
+  // Lấy danh sách time slots available (MỚI)
+  static getAvailableTimeSlots(allTimeSlots, bookedAppointments) {
+    if (!allTimeSlots || !Array.isArray(allTimeSlots)) {
+      return [];
+    }
+
+    return allTimeSlots.filter(timeSlot => 
+      this.isTimeSlotAvailable(timeSlot, bookedAppointments)
+    );
+  }
+
+  // Lấy danh sách time slots đã booked (MỚI)
+  static getBookedTimeSlots(allTimeSlots, bookedAppointments) {
+    if (!allTimeSlots || !Array.isArray(allTimeSlots)) {
+      return [];
+    }
+
+    return allTimeSlots.filter(timeSlot => 
+      !this.isTimeSlotAvailable(timeSlot, bookedAppointments)
+    );
   }
 
   // Mock data để test UI

@@ -209,7 +209,7 @@ class PatientService {
       throw error;
     }
   }
-
+  
   // Get or create patient - IMPROVED VERSION
   static async getOrCreatePatient(userId, formData) {
     try {

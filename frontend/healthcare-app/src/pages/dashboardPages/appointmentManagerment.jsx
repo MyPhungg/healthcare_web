@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Calendar, Clock, User, Filter, Edit, Trash2, Eye, Loader, RefreshCw, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
+import { Search, Plus, Calendar, Clock, User, Filter, Edit, Trash2, Eye, Loader, RefreshCw, CheckCircle, XCircle, PlayCircle, AlertCircle } from 'lucide-react';
 import Button from '../../components/common/button';
 import AppointmentService from '../../service/appointmentService';
 
@@ -52,7 +52,7 @@ const AppointmentManagement = () => {
       AppointmentService.formatStatus(apt.status) === statusFilter;
     
     const matchesDate = !dateFilter || 
-      AppointmentService.formatDate(apt.appointmentDate) === dateFilter;
+      apt.appointmentDate?.includes(dateFilter);
     
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -94,7 +94,7 @@ const AppointmentManagement = () => {
     };
     
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${bg} ${text}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit ${bg} ${text}`}>
         <Icon size={12} />
         {label}
       </span>
@@ -210,7 +210,7 @@ const AppointmentManagement = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-96">
+      <div className="p-4 sm:p-6 flex items-center justify-center min-h-96">
         <div className="text-center">
           <Loader className="animate-spin mx-auto mb-4 text-blue-600" size={32} />
           <p className="text-gray-600">Đang tải danh sách lịch hẹn...</p>
@@ -220,32 +220,33 @@ const AppointmentManagement = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Quản lý lịch hẹn</h1>
-          <p className="text-gray-600 mt-1">Quản lý và theo dõi tất cả lịch hẹn trong hệ thống</p>
+    <div className="p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 truncate">Quản lý lịch hẹn</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Quản lý và theo dõi tất cả lịch hẹn trong hệ thống</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={fetchAppointments}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
           >
-            <RefreshCw size={20} />
-            Làm mới
+            <RefreshCw size={18} />
+            <span className="whitespace-nowrap">Làm mới</span>
           </button>
-          <Button variant="primary" onClick={handleCreateAppointment}>
-            <Plus size={20} className="mr-2" />
-            Tạo lịch hẹn mới
+          <Button variant="primary" onClick={handleCreateAppointment} className="text-sm sm:text-base">
+            <Plus size={18} className="mr-1 sm:mr-2" />
+            <span className="whitespace-nowrap">Tạo lịch hẹn</span>
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 flex items-start gap-3">
-          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">{error}</p>
+        <div className="mb-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 flex items-start gap-3 text-sm sm:text-base">
+          <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium break-words">{error}</p>
             {useMockData && (
               <p className="text-sm mt-1">
                 Dữ liệu đang được hiển thị từ bộ nhớ tạm. Thao tác sẽ không được lưu lại.
@@ -256,48 +257,48 @@ const AppointmentManagement = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
-          <p className="text-gray-500 text-sm">Tổng lịch hẹn</p>
-          <p className="text-2xl font-bold text-gray-800">{appointments.length}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border border-gray-200">
+          <p className="text-gray-500 text-xs sm:text-sm">Tổng lịch hẹn</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-800">{appointments.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
-          <p className="text-gray-500 text-sm">Chờ xác nhận</p>
-          <p className="text-2xl font-bold text-yellow-600">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border border-gray-200">
+          <p className="text-gray-500 text-xs sm:text-sm">Chờ xác nhận</p>
+          <p className="text-xl sm:text-2xl font-bold text-yellow-600">
             {appointments.filter(a => a.status === 'PENDING').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
-          <p className="text-gray-500 text-sm">Đã xác nhận</p>
-          <p className="text-2xl font-bold text-green-600">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border border-gray-200">
+          <p className="text-gray-500 text-xs sm:text-sm">Đã xác nhận</p>
+          <p className="text-xl sm:text-2xl font-bold text-green-600">
             {appointments.filter(a => a.status === 'CONFIRMED').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
-          <p className="text-gray-500 text-sm">Hoàn thành</p>
-          <p className="text-2xl font-bold text-blue-600">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border border-gray-200">
+          <p className="text-gray-500 text-xs sm:text-sm">Hoàn thành</p>
+          <p className="text-xl sm:text-2-2xl font-bold text-blue-600">
             {appointments.filter(a => a.status === 'COMPLETED').length}
           </p>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-gray-200">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white rounded-xl shadow-md p-3 sm:p-4 mb-6 border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Tìm kiếm theo ID, tên bệnh nhân, tên bác sĩ, lý do..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-sm sm:text-base"
             />
           </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+            className="px-3 sm:px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-sm sm:text-base"
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="pending">Chờ xác nhận</option>
@@ -309,7 +310,7 @@ const AppointmentManagement = () => {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+            className="px-3 sm:px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-sm sm:text-base"
           />
           <button 
             onClick={() => {
@@ -317,9 +318,9 @@ const AppointmentManagement = () => {
               setStatusFilter('all');
               setDateFilter('');
             }}
-            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
           >
-            <Filter size={18} />
+            <Filter size={16} />
             Xóa bộ lọc
           </button>
         </div>
@@ -328,28 +329,26 @@ const AppointmentManagement = () => {
       {/* Appointments Table */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
         {filteredAppointments.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="text-gray-400" size={24} />
+          <div className="text-center py-8 sm:py-12">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <Search className="text-gray-400" size={20} />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy lịch hẹn</h3>
-            <p className="text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Không tìm thấy lịch hẹn</h3>
+            <p className="text-gray-500 text-sm sm:text-base">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px]">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-blue-600 text-white">
                 <tr>
-                  <th className="px-6 py-4 text-left font-semibold">ID</th>
-                  <th className="px-6 py-4 text-left font-semibold">Bệnh nhân</th>
-                  <th className="px-6 py-4 text-left font-semibold">Bác sĩ</th>
-                  <th className="px-6 py-4 text-left font-semibold">Chuyên khoa</th>
-                  <th className="px-6 py-4 text-left font-semibold">Ngày khám</th>
-                  <th className="px-6 py-4 text-left font-semibold">Giờ khám</th>
-                  <th className="px-6 py-4 text-left font-semibold">Lý do</th>
-                  <th className="px-6 py-4 text-left font-semibold">Giá khám</th>
-                  <th className="px-6 py-4 text-center font-semibold">Trạng thái</th>
-                  <th className="px-6 py-4 text-center font-semibold">Thao tác</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm">ID</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm">Bệnh nhân</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm">Bác sĩ</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm">Ngày giờ</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm">Lý do</th>
+                  <th className="px-3 sm:px-4 py-3 text-center font-semibold text-xs sm:text-sm">Giá khám</th>
+                  <th className="px-3 sm:px-4 py-3 text-center font-semibold text-xs sm:text-sm">Trạng thái</th>
+                  <th className="px-3 sm:px-4 py-3 text-center font-semibold text-xs sm:text-sm">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -365,72 +364,74 @@ const AppointmentManagement = () => {
                         index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                       }`}
                     >
-                      <td className="px-6 py-4 font-semibold text-gray-800">
-                        {appointment.appointmentId || 'N/A'}
+                      <td className="px-3 sm:px-4 py-3 font-semibold text-gray-800 text-xs sm:text-sm">
+                        <div className="max-w-[80px] sm:max-w-none truncate" title={appointment.appointmentId}>
+                          {appointment.appointmentId || 'N/A'}
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <User size={18} className="text-gray-400" />
-                          <span className="font-medium text-gray-800">
+                      <td className="px-3 sm:px-4 py-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <User size={14} className="text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-800 text-xs sm:text-sm truncate" title={appointment.patientName}>
                             {appointment.patientName || 'Chưa cập nhật'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-700">
+                      <td className="px-3 sm:px-4 py-3 text-gray-700 text-xs sm:text-sm truncate max-w-[120px]" title={appointment.doctorName}>
                         {appointment.doctorName || 'Chưa cập nhật'}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                          {appointment.specialty || 'Chưa cập nhật'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Calendar size={16} />
-                          {AppointmentService.formatDate(appointment.appointmentDate)}
+                      <td className="px-3 sm:px-4 py-3 text-xs sm:text-sm">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-gray-700">
+                            <Calendar size={12} />
+                            <span>{AppointmentService.formatDate(appointment.appointmentDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Clock size={12} />
+                            <span>{timeDisplay}</span>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Clock size={16} />
-                          {timeDisplay}
+                      <td className="px-3 sm:px-4 py-3 text-gray-700 text-xs sm:text-sm max-w-[150px]">
+                        <div className="truncate" title={appointment.reason}>
+                          {appointment.reason || 'Không có'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-700 max-w-xs truncate" title={appointment.reason}>
-                        {appointment.reason || 'Không có'}
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-blue-600">
+                      <td className="px-3 sm:px-4 py-3 font-semibold text-blue-600 text-xs sm:text-sm text-center">
                         {priceDisplay}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        {getStatusBadge(appointment.status)}
+                      <td className="px-3 sm:px-4 py-3 text-center">
+                        <div className="flex justify-center">
+                          {getStatusBadge(appointment.status)}
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-2">
+                      <td className="px-3 sm:px-4 py-3">
+                        <div className="flex justify-center gap-1 sm:gap-2">
                           <button 
                             onClick={() => handleView(appointment.appointmentId)}
-                            className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                            className="p-1.5 sm:p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                             title="Xem chi tiết"
                           >
-                            <Eye size={16} />
+                            <Eye size={14} />
                           </button>
                           
                           {availableActions.map((action, actionIndex) => {
                             const IconComponent = action.icon;
                             const isLoading = actionLoading === `${appointment.appointmentId}-${action.label}`;
+                            const colorClass = `bg-${action.color}-500 hover:bg-${action.color}-600`;
                             
                             return (
                               <button 
                                 key={actionIndex}
                                 onClick={action.action}
                                 disabled={isLoading}
-                                className={`p-2 bg-${action.color}-500 hover:bg-${action.color}-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                                className={`p-1.5 sm:p-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${colorClass}`}
                                 title={action.label}
                               >
                                 {isLoading ? (
-                                  <Loader size={16} className="animate-spin" />
+                                  <Loader size={14} className="animate-spin" />
                                 ) : (
-                                  <IconComponent size={16} />
+                                  <IconComponent size={14} />
                                 )}
                               </button>
                             );
@@ -440,13 +441,13 @@ const AppointmentManagement = () => {
                             <button 
                               onClick={() => handleDelete(appointment.appointmentId)}
                               disabled={actionLoading}
-                              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1.5 sm:p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Hủy lịch"
                             >
                               {actionLoading ? (
-                                <Loader size={16} className="animate-spin" />
+                                <Loader size={14} className="animate-spin" />
                               ) : (
-                                <Trash2 size={16} />
+                                <Trash2 size={14} />
                               )}
                             </button>
                           )}
@@ -462,7 +463,7 @@ const AppointmentManagement = () => {
       </div>
 
       {/* Summary */}
-      <div className="mt-4 text-sm text-gray-600">
+      <div className="mt-4 text-sm text-gray-600 text-center sm:text-left">
         Hiển thị {filteredAppointments.length} trong tổng số {appointments.length} lịch hẹn
       </div>
     </div>

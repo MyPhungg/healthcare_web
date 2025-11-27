@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Download, Edit2, FileText } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Mail, Phone, MapPin, Calendar, Download, Edit2, FileText, Camera } from 'lucide-react';
 import Button from '../../components/common/button';
 import PatientService from '../../service/patientService';
 import AppointmentService from '../../service/appointmentService';
@@ -11,13 +11,17 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Lấy userId từ token
-  const getUserIdFromToken = () => {
+  // Lấy thông tin user từ token
+  const getUserInfoFromToken = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return null;
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId || payload.sub;
+      return {
+        userId: payload.userId || payload.sub,
+        email: payload.email,
+        phone: payload.phone
+      };
     } catch (error) {
       console.error('Error decoding token:', error);
       return null;
@@ -28,23 +32,23 @@ const Profile = () => {
   const fetchPatientInfo = async () => {
     try {
       const token = localStorage.getItem('token');
-      const userId = getUserIdFromToken();
+      const userFromToken = getUserInfoFromToken();
       
-      if (!token || !userId) {
+      if (!token || !userFromToken) {
         throw new Error('No authentication token found');
       }
 
-      const patientData = await PatientService.getPatientByUserId(userId, token);
+      const patientData = await PatientService.getPatientByUserId(userFromToken.userId, token);
       console.log('Patient data:', patientData);
       
-      // Format data để hiển thị
+      // Format data để hiển thị - lấy email và phone từ token
       setUserInfo({
         patientId: patientData.patientId,
         name: patientData.fullName || 'Chưa có tên',
-        phone: patientData.user?.phone || 'Chưa có số điện thoại',
-        email: patientData.user?.email || 'Chưa có email',
+        phone: userFromToken.phone || 'Chưa có số điện thoại', // Lấy từ token
+        email: userFromToken.email || 'Chưa có email', // Lấy từ token
         dateOfBirth: patientData.dateOfBirth || 'Chưa có ngày sinh',
-        gender: patientData.gender === 'MALE' ? 'Nam' : patientData.gender === 'FEMALE' ? 'Nữ' : 'Chưa có',
+        gender: patientData.gender === 'MALE' ? 'Nam' : patientData.gender === 'FEMALE' ? 'Nữ' : 'Khác',
         address: patientData.address || 'Chưa có địa chỉ',
         district: patientData.district || 'Chưa có quận/huyện',
         city: patientData.city || 'Chưa có thành phố',
@@ -52,7 +56,7 @@ const Profile = () => {
         avatar: patientData.profileImg || null
       });
 
-      return patientData.patientId; // Trả về patientId để fetch appointments
+      return patientData.patientId;
 
     } catch (err) {
       console.error('Error fetching patient info:', err);
@@ -73,7 +77,6 @@ const Profile = () => {
       const appointmentsData = await AppointmentService.getAppointmentsByPatient(patientId, token);
       console.log('Appointments data:', appointmentsData);
       
-      // Format appointments data
       const formattedAppointments = appointmentsData.map(appointment => ({
         id: appointment.appointmentId,
         doctorName: appointment.doctorName || 'Đang cập nhật',
@@ -89,11 +92,10 @@ const Profile = () => {
 
     } catch (err) {
       console.error('Error fetching appointments:', err);
-      setAppointments([]); // Set empty array nếu có lỗi
+      setAppointments([]);
     }
   };
 
-  // Fetch data khi component mount
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -122,27 +124,45 @@ const Profile = () => {
         throw new Error('No authentication token found or patient ID missing');
       }
 
-      // Chuẩn bị data để gửi lên API
+      // Chuyển đổi gender từ frontend sang backend format
+      const backendGender = updatedData.gender === 'Nam' ? 'MALE' : updatedData.gender === 'Nữ' ? 'FEMALE' : 'OTHER';
+
+      // Tạo object data để gửi lên service - KHÔNG gửi email và phone
       const patientUpdateData = {
-        fullName: updatedData.name,
-        gender: updatedData.gender === 'Nam' ? 'MALE' : updatedData.gender === 'Nữ' ? 'FEMALE' : 'OTHER',
-        dateOfBirth: updatedData.dateOfBirth,
-        address: updatedData.address,
-        district: updatedData.district,
-        city: updatedData.city,
-        insuranceNum: updatedData.insuranceNum,
-        profileImg: updatedData.avatar,
+        fullName: updatedData.name || '',
+        gender: backendGender,
+        dateOfBirth: updatedData.dateOfBirth || '',
+        address: updatedData.address || '',
+        district: updatedData.district || '',
+        city: updatedData.city || '',
+        insuranceNum: updatedData.insuranceNum || '',
+        profileImg: updatedData.avatar instanceof File ? updatedData.avatar : null,
         coverImg: null
       };
+
+      console.log('Sending update data:', patientUpdateData);
 
       const result = await PatientService.updatePatient(userInfo.patientId, patientUpdateData, token);
       console.log('Update successful:', result);
       
       // Cập nhật lại thông tin local
-      setUserInfo(prev => ({
-        ...prev,
-        ...updatedData
-      }));
+      if (updatedData.avatar instanceof File) {
+        // Fetch lại thông tin patient để lấy URL ảnh mới từ server
+        const userFromToken = getUserInfoFromToken();
+        const freshPatientData = await PatientService.getPatientByUserId(userFromToken.userId, token);
+        
+        setUserInfo(prev => ({
+          ...prev,
+          ...updatedData,
+          avatar: freshPatientData.profileImg // Lấy URL ảnh mới từ server
+        }));
+      } else {
+        // Nếu không có ảnh mới, update bình thường
+        setUserInfo(prev => ({
+          ...prev,
+          ...updatedData
+        }));
+      }
       
       return result;
 
@@ -180,13 +200,11 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 mt-30">
-      {/* Header với gradient xanh */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Avatar */}
             <div className="relative">
-              <div className="w-40 h-40 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/50 shadow-2xl">
+              <div className="w-40 h-40 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/50 shadow-2xl overflow-hidden">
                 {userInfo?.avatar ? (
                   <img 
                     src={userInfo.avatar} 
@@ -199,7 +217,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* User Info */}
             <div className="flex-1 text-center md:text-left text-white">
               <h1 className="text-4xl font-bold mb-3">{userInfo?.name || 'Chưa có tên'}</h1>
               <p className="text-lg mb-1">
@@ -209,20 +226,12 @@ const Profile = () => {
                 <span className="font-medium">E-mail:</span> {userInfo?.email || 'Chưa có email'}
               </p>
             </div>
-
-            {/* Upload Button */}
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition-all flex items-center gap-2">
-              <Download size={20} />
-              Tải ảnh lên
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Content Area */}
       <div className="container mx-auto px-4 py-6">
         <div className="flex gap-6">
-          {/* Sidebar */}
           <div className="w-64 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <button
@@ -248,7 +257,6 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="flex-1">
             <div className="bg-white rounded-lg shadow-md p-6">
               {activeTab === 'info' ? (
@@ -272,9 +280,14 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(userInfo);
   const [saving, setSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(userInfo?.avatar || null);
+  const fileInputRef = useRef(null);
+  const [avatarFile, setAvatarFile] = useState(null);
 
   useEffect(() => {
     setFormData(userInfo);
+    setAvatarPreview(userInfo?.avatar || null);
+    setAvatarFile(null);
   }, [userInfo]);
 
   const handleChange = (e) => {
@@ -287,9 +300,17 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await onUpdatePatient(formData);
+      
+      // Chuẩn bị data để gửi, nếu có file ảnh mới thì thêm vào
+      const dataToUpdate = {
+        ...formData,
+        avatar: avatarFile // Gửi file ảnh nếu có
+      };
+
+      await onUpdatePatient(dataToUpdate);
+      
       setIsEditing(false);
-      // Có thể thêm thông báo thành công ở đây
+      setAvatarFile(null);
       alert('Cập nhật thông tin thành công!');
     } catch (error) {
       alert('Có lỗi xảy ra khi cập nhật thông tin: ' + error.message);
@@ -300,7 +321,43 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
 
   const handleCancel = () => {
     setFormData(userInfo);
+    setAvatarPreview(userInfo?.avatar || null);
+    setAvatarFile(null);
     setIsEditing(false);
+  };
+
+  const handleAvatarClick = () => {
+    if (isEditing && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Vui lòng chọn file ảnh!');
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Kích thước ảnh không được vượt quá 5MB!');
+        return;
+      }
+
+      try {
+        // Tạo URL preview tạm thời
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarPreview(previewUrl);
+        setAvatarFile(file);
+        
+        alert('Ảnh đã được chọn! Nhấn "Lưu thay đổi" để cập nhật.');
+      } catch (error) {
+        alert('Có lỗi xảy ra khi chọn ảnh: ' + error.message);
+        setAvatarPreview(userInfo?.avatar || null);
+        setAvatarFile(null);
+      }
+    }
   };
 
   return (
@@ -324,6 +381,61 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
         )}
       </div>
 
+      {isEditing && (
+        <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Ảnh đại diện</h3>
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <div 
+                className="w-32 h-32 bg-white rounded-full flex items-center justify-center border-4 border-white shadow-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={handleAvatarClick}
+              >
+                {avatarPreview ? (
+                  <img 
+                    src={avatarPreview} 
+                    alt="Avatar preview" 
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <User size={48} className="text-gray-400" />
+                )}
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-full">
+                  <Camera size={32} className="text-white" />
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
+            <div className="flex-1">
+              <p className="text-gray-600 mb-2">
+                Nhấn vào ảnh để chọn ảnh mới từ thiết bị của bạn
+              </p>
+              <p className="text-sm text-gray-500">
+                Định dạng hỗ trợ: JPG, PNG, GIF. Kích thước tối đa: 5MB
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={handleAvatarClick}
+                className="mt-3"
+              >
+                <Download size={16} className="mr-2" />
+                Chọn ảnh
+              </Button>
+              {avatarFile && (
+                <p className="mt-2 text-green-600 text-sm">
+                  ✓ Đã chọn ảnh mới. Nhấn "Lưu thay đổi" để cập nhật.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <InfoField
           icon={User}
@@ -338,8 +450,9 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
           label="Số điện thoại"
           value={formData?.phone || ''}
           name="phone"
-          isEditing={isEditing}
+          isEditing={false} // Luôn disable, chỉ hiển thị
           onChange={handleChange}
+          disabled={true}
         />
         <InfoField
           icon={Mail}
@@ -347,8 +460,9 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
           value={formData?.email || ''}
           name="email"
           type="email"
-          isEditing={isEditing}
+          isEditing={false} // Luôn disable, chỉ hiển thị
           onChange={handleChange}
+          disabled={true}
         />
         <InfoField
           icon={Calendar}
@@ -369,7 +483,8 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
           as="select"
           options={[
             { value: 'Nam', label: 'Nam' },
-            { value: 'Nữ', label: 'Nữ' }
+            { value: 'Nữ', label: 'Nữ' },
+            { value: 'Khác', label: 'Khác' }
           ]}
         />
         <InfoField
@@ -422,7 +537,8 @@ const InfoField = ({
   isEditing, 
   onChange,
   as = 'input',
-  options = []
+  options = [],
+  disabled = false
 }) => {
   return (
     <div className="space-y-2">
@@ -430,7 +546,7 @@ const InfoField = ({
         <Icon size={18} className="text-blue-600" />
         <label className="text-sm font-semibold text-gray-600">{label}</label>
       </div>
-      {isEditing ? (
+      {isEditing && !disabled ? (
         as === 'select' ? (
           <select
             name={name}
@@ -454,15 +570,17 @@ const InfoField = ({
           />
         )
       ) : (
-        <div className="px-4 py-3 bg-gray-50 rounded-lg">
-          <p className="text-gray-800 font-medium">{value || 'Chưa có thông tin'}</p>
+        <div className={`px-4 py-3 rounded-lg ${disabled ? 'bg-gray-100' : 'bg-gray-50'}`}>
+          <p className={`font-medium ${disabled ? 'text-gray-500' : 'text-gray-800'}`}>
+            {value || 'Chưa có thông tin'}
+          </p>
         </div>
       )}
     </div>
   );
 };
 
-// Appointment History Component
+// Appointment History Component (giữ nguyên)
 const AppointmentHistory = ({ appointments }) => {
   const getStatusBadge = (status) => {
     const config = {
@@ -487,7 +605,6 @@ const AppointmentHistory = ({ appointments }) => {
         Lịch sử đặt lịch
       </h2>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -526,7 +643,6 @@ const AppointmentHistory = ({ appointments }) => {
         </table>
       </div>
 
-      {/* Empty State */}
       {appointments.length === 0 && (
         <div className="text-center py-12">
           <Calendar size={64} className="mx-auto text-gray-300 mb-4" />

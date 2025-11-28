@@ -8,7 +8,7 @@ CREATE TABLE schedule (
     end_time TIME NOT NULL,
     consultation_fee DECIMAL(10, 2),
     slot_duration INT NOT NULL -- tính bằng phút
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE TABLE appointment (
     appointment_id VARCHAR(50) PRIMARY KEY,
     schedule_id VARCHAR(50) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE appointment (
     interacted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     interacted_by VARCHAR(50) NOT NULL,
     reason TEXT
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE day_off (
     day_off_id VARCHAR(50) PRIMARY KEY,
@@ -33,35 +33,86 @@ CREATE TABLE day_off (
     created_by VARCHAR(50) NOT NULL,
     status ENUM('ENABLED', 'DISABLED') DEFAULT 'ENABLED',
     UNIQUE (doctor_id, date_off)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-INSERT INTO schedule (
-    schedule_id,
-    doctor_id,
-    working_days,
-    start_time,
-    end_time,
-    consultation_fee,
-    slot_duration
-) VALUES
-    ('sch30000001', 'doc20000001', 'MON,TUE,WED,THU,FRI,SAT,SUN', '08:00:00', '12:00:00', 300000.00, 30),
-    ('sch30000002', 'doc20000002', 'MON,TUE,WED,THU,FRI,SAT,SUN', '14:00:00', '18:00:00', 450000.00, 20),
-    ('sch30000003', 'doc20000003', 'MON,TUE,WED,THU,FRI,SAT,SUN', '16:00:00', '20:00:00', 500000.00, 45);
+INSERT INTO schedule (schedule_id, doctor_id, working_days, start_time, end_time, consultation_fee, slot_duration) VALUES
+('sch10238455','doc38492015','MON,TUE,WED,THU,FRI','08:00','17:00',300000,30),
+('sch94830211','doc59384012','MON,WED,FRI','08:30','16:30',280000,25),
+('sch22019384','doc12059384','TUE,THU,SAT','07:30','15:00',320000,30),
+('sch59384012','doc90581244','MON,TUE,THU,FRI','09:00','17:00',250000,20),
+('sch88410302','doc49208531','WED,THU,SAT','08:00','14:00',270000,25),
+('sch49200231','doc19283744','MON,TUE,WED,FRI','08:00','17:00',350000,30),
+('sch30948200','doc58392044','TUE,THU,SAT','07:30','15:30',260000,20),
+('sch48201933','doc48392022','WED,FRI,SAT','08:00','16:00',300000,25),
+('sch99832041','doc49382011','MON,TUE,THU','09:00','17:00',400000,30),
+('sch55930292','doc28492004','TUE,WED,FRI','08:00','16:30',280000,25),
 
+('sch20483910','doc58291034','MON,THU,FRI','08:00','17:00',300000,30),
+('sch39200214','doc22291033','TUE,WED,THU','07:30','15:30',310000,25),
+('sch55201949','doc91283044','MON,TUE,WED','08:00','16:00',260000,20),
+('sch30299481','doc11293485','WED,THU,FRI','09:00','17:00',290000,25),
+('sch93840220','doc32393752','TUE,THU,SAT','08:00','15:00',270000,30),
+('sch22019483','doc72393411','MON,TUE,FRI','08:30','17:00',300000,20),
+('sch03840225','doc11922384','TUE,WED,THU','08:00','16:30',250000,30),
+('sch99200214','doc33291944','MON,THU,FRI','09:00','17:00',320000,25),
+('sch33948201','doc43219402','TUE,WED,SAT','07:30','15:30',260000,20),
+('sch23094833','doc55219021','THU,FRI,SAT','08:00','17:00',340000,30),
+
+('sch49820133','doc51402011','MON,TUE,WED,THU','08:00','16:00',290000,20),
+('sch39840220','doc71001244','TUE,THU,FRI','08:30','17:00',280000,25),
+('sch55830294','doc61220094','MON,WED,FRI','09:00','16:00',260000,30),
+('sch19200249','doc33220891','WED,THU,SAT','07:30','15:30',310000,20),
+('sch66849302','doc88120914','MON,TUE,FRI','08:00','16:00',300000,30),
+('sch44201939','doc99201449','TUE,WED,THU','08:30','17:00',250000,20),
+('sch33019284','doc74330091','MON,WED,FRI','09:00','17:00',280000,25),
+('sch20938484','doc22031944','TUE,THU,SAT','07:30','15:00',300000,30),
+('sch93948402','doc11039224','WED,THU,FRI','08:00','16:00',310000,30),
+('sch12039488','doc23039114','MON,TUE,SAT','08:30','16:30',290000,20),
+
+('sch83840229','doc31109443','TUE,THU,FRI','08:00','17:00',260000,25),
+('sch99038484','doc24429401','MON,WED,FRI','09:00','16:00',270000,20),
+('sch22013948','doc58224490','TUE,THU,SAT','07:30','15:30',320000,30),
+('sch53392002','doc44922940','MON,TUE,THU','08:00','16:30',250000,30),
+('sch30291844','doc11559024','WED,THU,FRI','08:30','17:00',290000,20),
+('sch93840291','doc22915501','TUE,WED,FRI','09:00','17:00',310000,25),
+('sch44201929','doc33920841','MON,TUE,SAT','07:30','15:30',280000,30),
+('sch22938482','doc22895501','THU,FRI,SAT','08:00','16:00',300000,20),
+('sch11938485','doc99345102','MON,TUE,THU','08:30','17:00',260000,25),
+('sch77840291','doc22058310','TUE,WED,FRI','08:00','16:00',270000,30),
+
+('sch55920394','doc11953040','MON,THU,FRI','07:30','15:30',300000,25),
+('sch22203948','doc93022410','TUE,WED,THU','08:00','16:00',280000,20),
+('sch48492010','doc33105514','MON,WED,SAT','09:00','17:00',260000,30),
+('sch30498200','doc44770021','TUE,THU,SAT','07:30','15:00',300000,25),
+('sch11920394','doc55810441','MON,TUE,FRI','08:00','17:00',290000,30),
+('sch00938482','doc55911904','WED,THU,FRI','08:30','16:30',310000,20),
+('sch22094844','doc66119020','MON,WED,FRI','09:00','17:00',250000,25),
+('sch33940291','doc77119440','TUE,THU,SAT','07:30','15:30',320000,30),
+('sch44019384','doc88211409','MON,TUE,THU','08:00','16:00',280000,20),
+('sch55830211','doc99288711','WED,FRI,SAT','08:30','17:00',300000,25);
 
 INSERT INTO appointment (
-    appointment_id,
-    schedule_id,
-    patient_id,
-    status,
-    appointment_date,
-    appointment_start,
-    appointment_end,
-    interacted_by,
-    reason
+    appointment_id, schedule_id, patient_id, status, appointment_date,
+    appointment_start, appointment_end, interacted_by, reason
 ) VALUES
-    ('app40000001', 'sch30000001', 'pat10000001', 'CONFIRMED', '2025-11-03', '08:00:00', '08:30:00', 'user89012345', 'Bé bị sốt và ho liên tục 3 ngày.'),
-    ('app40000002', 'sch30000002', 'pat10000002', 'PENDING', '2025-11-04', '14:00:00', '14:20:00', 'user23456789', 'Khám sức khỏe định kỳ.'),
-    ('app40000003', 'sch30000003', 'pat10000001', 'COMPLETED', '2025-11-02', '09:00:00', '09:30:00', 'user89012345', 'Tái khám sau khi dùng thuốc.'),
-    ('app40000004', 'sch30000001', 'pat10000001', 'CANCELLED', '2025-11-03', '10:00:00', '10:20:00', 'user23456789', 'Bệnh nhân bận đột xuất.'),
-    ('app40000005', 'sch30000003', 'pat10000003', 'CONFIRMED', '2025-11-01', '16:00:00', '16:45:00', 'user89012345', 'Khám răng và lấy cao răng.');
+('app10000011','sch10238455','pat48201933','PENDING','2025-12-01','08:00','08:30','usr20000001','Khám tổng quát'),
+('app10000012','sch94830211','pat99120483','PENDING','2025-12-03','08:30','08:55','usr20000002','Đau họng'),
+('app10000013','sch22019384','pat20394811','PENDING','2025-12-04','07:30','08:00','usr20000003','Khám nội khoa'),
+('app10000014','sch59384012','pat59384022','PENDING','2025-12-02','09:00','09:20','usr20000004','Tư vấn sức khỏe sinh sản'),
+('app10000015','sch88410302','pat11920384','PENDING','2025-12-03','08:00','08:25','usr20000005','Khám mắt'),
+('app10000016','sch49200231','pat33019482','PENDING','2025-12-05','08:00','08:30','usr20000006','Khám răng'),
+('app10000017','sch30948200','pat22039481','PENDING','2025-12-06','07:30','07:50','usr20000007','Khám tai mũi họng'),
+('app10000018','sch48201933','pat55839201','PENDING','2025-12-05','08:00','08:25','usr20000008','Khám tổng quát'),
+('app10000019','sch99832041','pat22938410','PENDING','2025-12-04','09:00','09:30','usr20000009','Khám nội khoa'),
+('app10000020','sch55930292','pat99832044','PENDING','2025-12-03','08:00','08:25','usr20000010','Khám răng'),
+
+('app10000021','sch20483910','pat48201933','PENDING','2025-12-01','08:00','08:30','usr20000001','Khám tổng quát'),
+('app10000022','sch39200214','pat99120483','PENDING','2025-12-03','07:30','07:55','usr20000002','Khám nội khoa'),
+('app10000023','sch55201949','pat20394811','PENDING','2025-12-02','08:00','08:20','usr20000003','Khám sản phụ khoa'),
+('app10000024','sch30299481','pat59384022','PENDING','2025-12-04','09:00','09:25','usr20000004','Khám da liễu'),
+('app10000025','sch93840220','pat11920384','PENDING','2025-12-06','08:00','08:30','usr20000005','Khám tâm thần'),
+('app10000026','sch22019483','pat33019482','PENDING','2025-12-05','08:30','08:50','usr20000006','Khám tim mạch'),
+('app10000027','sch03840225','pat22039481','PENDING','2025-12-03','08:00','08:30','usr20000007','Khám răng'),
+('app10000028','sch99200214','pat55839201','PENDING','2025-12-01','09:00','09:25','usr20000008','Khám nội khoa'),
+('app10000029','sch33948201','pat22938410','PENDING','2025-12-02','07:30','07:50','usr20000009','Khám tổng quát'),
+('app10000030','sch23094833','pat99832044','PENDING','2025-12-04','08:00','08:30','usr20000010','Khám da liễu');

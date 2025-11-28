@@ -79,9 +79,9 @@ const Profile = () => {
       
       const formattedAppointments = appointmentsData.map(appointment => ({
         id: appointment.appointmentId,
-        doctorName: appointment.doctorName || 'Đang cập nhật',
+        doctorId: appointment.doctorId || 'Đang cập nhật',
         time: `${appointment.appointmentStart?.substring(0, 5) || ''} - ${appointment.appointmentEnd?.substring(0, 5) || ''}`,
-        price: appointment.consultationFee ? `${appointment.consultationFee.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ',
+        fee: appointment.fee ? `${appointment.fee.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ',
         bookingDate: new Date(appointment.interactedAt).toLocaleDateString('vi-VN'),
         appointmentDate: appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString('vi-VN') : 'Chưa có',
         status: appointment.status?.toLowerCase() || 'pending',
@@ -628,9 +628,9 @@ const AppointmentHistory = ({ appointments }) => {
                 }`}
               >
                 <td className="px-4 py-4 font-medium text-gray-800">{appointment.id}</td>
-                <td className="px-4 py-4 text-gray-700">{appointment.doctorName}</td>
+                <td className="px-4 py-4 text-gray-700">{appointment.doctorId}</td>
                 <td className="px-4 py-4 text-gray-700">{appointment.time}</td>
-                <td className="px-4 py-4 text-blue-600 font-semibold">{appointment.price}</td>
+                <td className="px-4 py-4 text-blue-600 font-semibold">{appointment.fee}</td>
                 <td className="px-4 py-4 text-gray-700">{appointment.appointmentDate}</td>
                 <td className="px-4 py-4 text-gray-700">{appointment.reason}</td>
                 <td className="px-4 py-4 text-gray-700">{appointment.bookingDate}</td>

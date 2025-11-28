@@ -53,7 +53,7 @@ class AppointmentService {
       const token = AuthService.getToken();
       console.log('Fetching appointments for schedule:', scheduleId);
       
-      const response = await fetch(`${API_BASE_URL}/appointments/by-schedule?scheduleId=${scheduleId}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/by-doctor?scheduleId=${scheduleId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

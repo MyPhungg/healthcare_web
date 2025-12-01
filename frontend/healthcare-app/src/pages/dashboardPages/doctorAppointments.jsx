@@ -34,6 +34,26 @@ const DoctorAppointment = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Transform API data to match component expectations
+  const transformAppointmentData = (apiData) => {
+    if (!apiData || !Array.isArray(apiData)) return [];
+    
+    return apiData.map(item => {
+      // Extract appointment data from nested structure
+      const appointmentData = {
+        ...item.appointment,
+        doctor: item.doctor,
+        fee: item.fee
+      };
+      
+      // Add patient info from doctor if needed (in case of API change)
+      // In current API, patient info is not included in the response
+      // We'll use what we have from appointment data
+      
+      return appointmentData;
+    });
+  };
+
   // Fetch schedule and appointments
   useEffect(() => {
     fetchData();
@@ -46,15 +66,23 @@ const DoctorAppointment = () => {
       const doctorId = await getDoctorId();
       if (doctorId) {
         const scheduleData = await ScheduleService.getDoctorSchedule(doctorId);
-        if (scheduleData) {
+        if (scheduleData && scheduleData.scheduleId) {
           setScheduleId(scheduleData.scheduleId);
           const appointmentsData = await AppointmentService.getAppointmentsBySchedule(scheduleData.scheduleId);
-          setAppointments(appointmentsData);
+          
+          // Transform data to match expected structure
+          const transformedData = transformAppointmentData(appointmentsData);
+          setAppointments(transformedData);
+        } else {
+          setAppointments([]);
         }
+      } else {
+        setAppointments([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Lỗi khi tải dữ liệu: ' + error.message);
+      setAppointments([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -64,8 +92,10 @@ const DoctorAppointment = () => {
   const getDoctorId = async () => {
     try {
       const userId = AuthService.getUserId();
+      if (!userId) return null;
+      
       const doctorProfile = await ScheduleService.getDoctorProfile(userId);
-      return doctorProfile.doctorId;
+      return doctorProfile?.doctorId || null;
     } catch (error) {
       console.error('Error getting doctor ID:', error);
       return null;
@@ -77,9 +107,18 @@ const DoctorAppointment = () => {
     await fetchData();
   };
 
+  // Helper function to extract searchable text from appointment
+  const getSearchableText = (appointment) => {
+    return [
+      appointment.appointmentId || '',
+      appointment.reason || '',
+      appointment.patientId || '',
+      appointment.status || ''
+    ].join(' ').toLowerCase();
+  };
+
   const filteredAppointments = appointments.filter(apt => {
-    const matchesSearch = apt.reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apt.appointmentId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = getSearchableText(apt).includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || apt.status === statusFilter.toUpperCase();
     const matchesDate = !dateFilter || apt.appointmentDate === dateFilter;
     return matchesSearch && matchesStatus && matchesDate;
@@ -143,9 +182,11 @@ const DoctorAppointment = () => {
       
       // Check if status transition is allowed
       const appointment = appointments.find(apt => apt.appointmentId === appointmentId);
-      if (appointment && !AppointmentService.isStatusTransitionAllowed(appointment.status, newStatus)) {
-        alert(`Không thể chuyển từ ${AppointmentService.getStatusDisplayName(appointment.status)} sang ${AppointmentService.getStatusDisplayName(newStatus)}`);
-        return;
+      if (appointment && AppointmentService.isStatusTransitionAllowed) {
+        if (!AppointmentService.isStatusTransitionAllowed(appointment.status, newStatus)) {
+          alert(`Không thể chuyển từ ${AppointmentService.getStatusDisplayName?.(appointment.status) || appointment.status} sang ${AppointmentService.getStatusDisplayName?.(newStatus) || newStatus}`);
+          return;
+        }
       }
 
       await AppointmentService.changeAppointmentStatus(appointmentId, newStatus);
@@ -190,15 +231,32 @@ const DoctorAppointment = () => {
 
   const handleViewDetails = async (appointment) => {
     setSelectedAppointment(appointment);
-    // Fetch patient details if available
-    try {
-      const patientInfo = await AppointmentService.getPatientInfo(appointment.patientId);
-      setPatientDetails(prev => ({
-        ...prev,
-        [appointment.patientId]: patientInfo
-      }));
-    } catch (error) {
-      console.error('Error fetching patient info:', error);
+    
+    // Since patient info is not in API response, we'll use what we have
+    // Or fetch additional info if available
+    if (appointment.patientId && !patientDetails[appointment.patientId]) {
+      try {
+        // Try to get patient info if service exists
+        if (AppointmentService.getPatientInfo) {
+          const patientInfo = await AppointmentService.getPatientInfo(appointment.patientId);
+          setPatientDetails(prev => ({
+            ...prev,
+            [appointment.patientId]: patientInfo
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching patient info:', error);
+        // Set default patient info if fetch fails
+        setPatientDetails(prev => ({
+          ...prev,
+          [appointment.patientId]: {
+            id: appointment.patientId,
+            name: 'Bệnh nhân',
+            phone: 'Chưa cập nhật',
+            email: 'Chưa cập nhật'
+          }
+        }));
+      }
     }
   };
 
@@ -309,10 +367,10 @@ const DoctorAppointment = () => {
             <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Đang làm mới...' : 'Làm mới'}
           </button>
-          <Button variant="primary">
+          {/* <Button variant="primary">
             <Calendar size={20} className="mr-2" />
             Lịch làm việc
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -537,7 +595,7 @@ const DoctorAppointment = () => {
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${priority.bg} ${priority.text}`}>
                         {priority.label}
-                      </span>
+                    </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       {getStatusBadge(appointment.status)}
@@ -561,7 +619,11 @@ const DoctorAppointment = () => {
                               key={actionIndex}
                               onClick={action.action}
                               disabled={isLoading}
-                              className={`p-2 bg-${action.color}-500 hover:bg-${action.color}-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                              className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                                ${action.color === 'green' ? 'bg-green-500 hover:bg-green-600 text-white' : ''}
+                                ${action.color === 'red' ? 'bg-red-500 hover:bg-red-600 text-white' : ''}
+                                ${action.color === 'blue' ? 'bg-blue-500 hover:bg-blue-600 text-white' : ''}
+                              `}
                               title={action.label}
                             >
                               {isLoading ? (
@@ -670,6 +732,12 @@ const DoctorAppointment = () => {
                         {getPriorityBadge(selectedAppointment).label}
                       </span>
                     </div>
+                    {selectedAppointment.fee && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600">Phí khám</label>
+                        <p className="text-gray-800">{selectedAppointment.fee.toLocaleString('vi-VN')} VNĐ</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

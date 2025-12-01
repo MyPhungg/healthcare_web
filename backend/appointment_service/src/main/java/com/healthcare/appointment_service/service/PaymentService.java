@@ -64,7 +64,7 @@ public class PaymentService {
 
 
             momoRequest.setIpnUrl("http://localhost:8081/api/payment/momo/notify");
-            momoRequest.setRedirectUrl("");
+            momoRequest.setRedirectUrl("http://localhost:5173/payment/callback");
             //http://localhost:8081/api/payment/momo/return
             momoRequest.setExtraData(appointment.getAppointmentId());
             momoRequest.setRequestType("captureWallet");

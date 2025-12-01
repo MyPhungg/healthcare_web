@@ -26,7 +26,7 @@ import DoctorDetail from '../pages/webPages/DoctorDetail';
 import DoctorRegister from '../pages/dashboardPages/DoctorRegister';
 import UserManagement from '../pages/dashboardPages/userManagement';
 import SearchResults from '../components/web/searchResult';
-
+import PaymentCallback from '../pages/webPages/paymentCallBack';
 function AppRoutes() {
   return (
     <BrowserRouter>
@@ -45,6 +45,7 @@ function AppRoutes() {
           <Route path="/doctordetail/:doctorId" element={<DoctorDetail/>} />
           <Route path="/doctor-register" element={<DoctorRegister/>} />
           <Route path="/search-results" element={<SearchResults/>} />
+          <Route path="/payment/callback" element={<PaymentCallback />} />
           {/* Add more routes as needed */}
         </Route>
                 {/* Admin Dashboard routes */}

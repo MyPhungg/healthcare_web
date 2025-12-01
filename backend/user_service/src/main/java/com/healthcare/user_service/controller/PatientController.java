@@ -24,7 +24,7 @@ public class PatientController {
     private static final Logger logger = LoggerFactory.getLogger(PatientController.class);
 
     @GetMapping
-    public List<Patient> getAll() {
+    public List<PatientResponse> getAll() {
         return patientService.getAllPatients();
     }
 

@@ -1,5 +1,6 @@
 package com.healthcare.user_service.service;
 
+import com.healthcare.user_service.dto.UserResponse;
 import com.healthcare.user_service.entity.Patient;
 import com.healthcare.user_service.entity.User;
 import com.healthcare.user_service.dto.PatientResponse;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -26,9 +28,29 @@ public class PatientService {
     private final FileStorageService fileStorageService;
 
 
-    public List<Patient> getAllPatients() {
+    public List<PatientResponse> getAllPatients() {
+
+        List<PatientResponse> patients = new ArrayList<>();
+        List<Patient> list = patientRepository.findAll();
+        for(Patient p : list){
+            PatientResponse res = new PatientResponse();
+            res = toResponse(p);
+            res.setUser(getUserByUserId(p.getUserId()));
+            patients.add(res);
+        }
+
+        return patients;
+    }
+    public List<Patient> getAllPatientsForReport() {
+
         return patientRepository.findAll();
     }
+    public UserResponse getUserByUserId(String userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(()->new RuntimeException("Không tìm thấy người dùng"));
+        return UserResponse.fromUser(user);
+    }
+
 
 //    public Optional<Patient> getPatientById(String patientId) {
 //        return patientRepository.findById(patientId);
@@ -36,7 +58,9 @@ public class PatientService {
 public PatientResponse getPatientById(String id) {
     Patient patient = patientRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Patient not found with id: " + id));
-    return toResponse(patient);
+    PatientResponse res =  toResponse(patient);
+    res.setUser(getUserByUserId(patient.getUserId()));
+    return res;
 }
 
     public Patient createPatient(String userId,

@@ -3,9 +3,12 @@ package com.healthcare.user_service.service.impl;
 import com.healthcare.user_service.common.CodeGeneratorUtils;
 import com.healthcare.user_service.dto.DoctorDTO;
 import com.healthcare.user_service.dto.DoctorRequest;
+import com.healthcare.user_service.dto.UserResponse;
 import com.healthcare.user_service.entity.Doctor;
 import com.healthcare.user_service.entity.Gender;
+import com.healthcare.user_service.entity.User;
 import com.healthcare.user_service.repository.DoctorRepository;
+import com.healthcare.user_service.repository.UserRepository;
 import com.healthcare.user_service.service.DoctorService;
 import com.healthcare.user_service.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
 
+    private final UserRepository userRepository;
     private final DoctorRepository doctorRepository;
     private final FileStorageService fileStorageService;
     @Override
@@ -83,7 +87,15 @@ public class DoctorServiceImpl implements DoctorService {
     public DoctorDTO getDoctorById(String doctorId) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found with id: " + doctorId));
-        return convertToDTO(doctor);
+        DoctorDTO doctorDTO = convertToDTO(doctor);
+        doctorDTO.setUser(getUserByUserId(doctorDTO.getUserId()));
+        return doctorDTO;
+    }
+
+    public UserResponse getUserByUserId(String userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(()->new RuntimeException("Không tìm thấy người dùng"));
+        return UserResponse.fromUser(user);
     }
 
     @Override

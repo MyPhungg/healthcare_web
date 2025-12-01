@@ -42,11 +42,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         // Bỏ qua các endpoint login/public
+
+//        if (path.startsWith("/api/auth/") ||
+//                path.startsWith("/api/payment/")|| path.startsWith("/appointments") ) {
+//
+//            logger.info("JWT Filter: bypass public endpoint: {}", path);
+//            filterChain.doFilter(request, response);  // CHỈ GỌI doFilter, KHÔNG RETURN
+//            return;  // ← QUAN TRỌNG: return sau khi gọi doFilter
+//        }
         if (path.startsWith("/api/auth/")) {
             logger.info("JWT Filter: bypass /api/auth/**");
             filterChain.doFilter(request, response);
             return;
         }
+
 
         // Check JWT cho các request khác
         if (header != null && header.startsWith("Bearer ")) {
@@ -82,6 +91,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 //        filterChain.doFilter(request, response);
     }
+//    @Override
+//    protected boolean shouldNotFilter(HttpServletRequest req) {
+//        String path = req.getServletPath();
+//        return path.startsWith("/api/auth/") ||
+//                path.startsWith("/api/payment/");
+//    }
 
 //    @Override
 //    protected boolean shouldNotFilter(HttpServletRequest request) {

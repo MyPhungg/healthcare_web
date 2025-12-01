@@ -82,7 +82,7 @@ class AuthService {
     };
     return rolePaths[role] || '/home';
   }
-   static async checkDoctorProfileExists(userId) {
+  static async checkDoctorProfileExists(userId) {
     try {
       const token = this.getToken();
       console.log('Checking doctor profile for user:', userId);

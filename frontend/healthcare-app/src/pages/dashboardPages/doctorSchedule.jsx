@@ -205,6 +205,7 @@ const DoctorSchedule = () => {
       total: appointments.length,
       pending: appointments.filter(a => a.status === 'PENDING').length,
       confirmed: appointments.filter(a => a.status === 'CONFIRMED').length,
+      complete: appointments.filter(a => a.status === 'COMPLETED').length,
       cancelled: appointments.filter(a => a.status === 'CANCELLED').length,
     };
   };
@@ -269,6 +270,19 @@ const DoctorSchedule = () => {
                 <p className="text-sm text-gray-600">Đã xác nhận</p>
                 <p className="text-xl font-bold text-green-600">
                   {getAppointmentStats(schedules[0]).confirmed}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Calendar className="text-blue-600" size={20} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Đã hoàn thành</p>
+                <p className="text-xl font-bold text-blue-600">
+                  {getAppointmentStats(schedules[0]).complete}
                 </p>
               </div>
             </div>
@@ -368,9 +382,11 @@ const DoctorSchedule = () => {
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             appointment.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
                             appointment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            appointment.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
                             'bg-red-100 text-red-800'
                           }`}>
                             {appointment.status === 'CONFIRMED' ? 'Đã xác nhận' :
+                            appointment.status === 'COMPLETED' ? 'Đã hoàn thành' :
                              appointment.status === 'PENDING' ? 'Đang chờ' : 'Đã hủy'}
                           </span>
                         </div>

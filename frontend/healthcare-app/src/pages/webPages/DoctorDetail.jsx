@@ -10,6 +10,22 @@ const DoctorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date()); // Thêm state cho thời gian hiện tại
+
+  // Cập nhật thời gian hiện tại mỗi phút
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      setCurrentTime(new Date());
+    };
+
+    // Cập nhật ngay lập tức
+    updateCurrentTime();
+
+    // Cập nhật mỗi phút
+    const interval = setInterval(updateCurrentTime, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch doctor details only
   useEffect(() => {
@@ -156,6 +172,35 @@ const DoctorDetail = () => {
     return formatDateToAPI(date);
   };
 
+  // Hàm kiểm tra xem một khung giờ có đã qua thời gian hiện tại chưa
+  const isTimeSlotInPast = (date, timeString) => {
+    // Nếu không phải hôm nay, thì không phải là quá khứ
+    if (!isToday(date)) {
+      return false;
+    }
+    
+    // Parse thời gian từ string (HH:MM)
+    const [hours, minutes] = timeString.split(':').map(Number);
+    
+    // Tạo đối tượng Date cho khung giờ này (hôm nay)
+    const slotDateTime = new Date(currentTime);
+    slotDateTime.setHours(hours, minutes, 0, 0);
+    
+    // So sánh với thời gian hiện tại
+    return slotDateTime < currentTime;
+  };
+
+  // Hàm kiểm tra xem một ngày có đã qua chưa (so với hôm nay)
+  const isDateInPast = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    
+    return compareDate < today;
+  };
+
   // Generate time slots for display
   const generateTimeSlots = (date) => {
     if (!schedule || !schedule.startTime) {
@@ -177,6 +222,11 @@ const DoctorDetail = () => {
     const currentDay = dayNames[date.getDay()];
     const workingDays = schedule.workingDays?.split(',') || [];
 
+    // Nếu ngày đã qua, không tạo slot
+    if (isDateInPast(date)) {
+      return [];
+    }
+
     if (!workingDays.includes(currentDay)) {
       return [];
     }
@@ -187,10 +237,14 @@ const DoctorDetail = () => {
       const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
       
       const isBooked = isTimeSlotBooked(date, timeString);
+      const isInPast = isTimeSlotInPast(date, timeString);
+      const isAvailable = !isBooked && !isInPast;
       
       slots.push({
         time: timeString,
-        available: !isBooked
+        available: isAvailable,
+        booked: isBooked,
+        inPast: isInPast
       });
     }
     
@@ -220,9 +274,13 @@ const DoctorDetail = () => {
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const isInPast = isTimeSlotInPast(new Date(), timeString);
+        
         slots.push({
           time: timeString,
-          available: true
+          available: !isInPast,
+          booked: false,
+          inPast: isInPast
         });
       }
     }
@@ -246,7 +304,12 @@ const DoctorDetail = () => {
   };
 
   // Handle book appointment với date chính xác
-  const handleBookAppointment = (date, time, available) => {
+  const handleBookAppointment = (date, time, available, inPast) => {
+    if (inPast) {
+      alert('Khung giờ này đã qua. Vui lòng chọn khung giờ khác.');
+      return;
+    }
+
     if (!available) {
       alert('Khung giờ này đã được đặt. Vui lòng chọn khung giờ khác.');
       return;
@@ -294,6 +357,15 @@ const DoctorDetail = () => {
     setLoading(true);
     setError(null);
   };
+
+  // Hàm hiển thị thời gian hiện tại
+  const getCurrentTimeDisplay = () => {
+    return currentTime.toLocaleTimeString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
   
   if (loading) {
     return (
@@ -334,6 +406,11 @@ const DoctorDetail = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 mt-30">
       <div className="container mx-auto px-4">
+        {/* Thời gian hiện tại */}
+        <div className="mb-4 text-sm text-gray-500 text-right">
+          Thời gian hiện tại: {getCurrentTimeDisplay()}
+        </div>
+
         {/* Doctor Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-6">
@@ -432,6 +509,26 @@ const DoctorDetail = () => {
                 </div>
               </div>
               
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
+                  <span className="text-gray-600">Có thể đặt</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                  <span className="text-gray-600">Đã đặt</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+                  <span className="text-gray-600">Đã qua giờ</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                  <span className="text-gray-600">Bác sĩ nghỉ</span>
+                </div>
+              </div>
+
               {/* Loading indicator cho lịch */}
               {scheduleLoading && (
                 <div className="text-center py-4 text-gray-500">
@@ -447,16 +544,19 @@ const DoctorDetail = () => {
                   const workingDays = schedule?.workingDays?.split(',') || [];
                   const isWorkingDay = workingDays.includes(currentDay);
                   const today = isToday(date);
+                  const isPastDate = isDateInPast(date);
 
                   return (
                     <div
                       key={index}
                       className={`text-center p-3 rounded-lg border ${
-                        today 
-                          ? 'border-blue-500 bg-blue-100 text-blue-800 font-semibold' 
-                          : isWorkingDay 
-                            ? 'border-blue-200 bg-blue-50 text-blue-700' 
-                            : 'border-gray-200 bg-gray-100 text-gray-400'
+                        isPastDate 
+                          ? 'border-gray-200 bg-gray-100 text-gray-400' 
+                          : today 
+                            ? 'border-blue-500 bg-blue-100 text-blue-800 font-semibold' 
+                            : isWorkingDay 
+                              ? 'border-blue-200 bg-blue-50 text-blue-700' 
+                              : 'border-gray-200 bg-gray-100 text-gray-400'
                       }`}
                     >
                       <div className="font-semibold">{formatDateForDisplay(date)}</div>
@@ -466,7 +566,10 @@ const DoctorDetail = () => {
                       {today && (
                         <div className="text-xs mt-1 text-blue-600">Hôm nay</div>
                       )}
-                      {!isWorkingDay && !today && (
+                      {isPastDate && (
+                        <div className="text-xs mt-1 text-gray-500">Đã qua</div>
+                      )}
+                      {!isWorkingDay && !today && !isPastDate && (
                         <div className="text-xs mt-1">Nghỉ</div>
                       )}
                     </div>
@@ -479,18 +582,22 @@ const DoctorDetail = () => {
                 <div className="space-y-4">
                   {calendarDays.map((date, dayIndex) => {
                     const today = isToday(date);
+                    const isPastDate = isDateInPast(date);
                     const timeSlots = generateTimeSlots(date);
                     const availableSlots = timeSlots.filter(slot => slot.available);
                     
                     return (
                       <div key={dayIndex} className="border border-gray-200 rounded-lg">
                         <div className={`p-3 border-b ${
-                          today ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                          today ? 'bg-blue-50 border-blue-200' : 
+                          isPastDate ? 'bg-gray-50 border-gray-300' :
+                          'bg-gray-50 border-gray-200'
                         }`}>
                           <div className="flex items-center justify-between">
                             <div className="font-semibold text-gray-800">
                               {formatDateForDisplay(date)}
                               {today && <span className="ml-2 text-blue-600 text-sm">(Hôm nay)</span>}
+                              {isPastDate && <span className="ml-2 text-gray-500 text-sm">(Đã qua)</span>}
                             </div>
                             <div className="text-sm text-gray-500">
                               {availableSlots.length} lượt khám có sẵn
@@ -501,7 +608,7 @@ const DoctorDetail = () => {
                         <div className="p-4">
                           {timeSlots.length === 0 ? (
                             <div className="text-center py-4 text-gray-500">
-                              Bác sĩ không làm việc vào ngày này
+                              {isPastDate ? 'Ngày đã qua' : 'Bác sĩ không làm việc vào ngày này'}
                             </div>
                           ) : (
                             <>
@@ -509,17 +616,23 @@ const DoctorDetail = () => {
                                 {timeSlots.slice(0, 12).map((slot, timeIndex) => (
                                   <button
                                     key={timeIndex}
-                                    onClick={() => handleBookAppointment(date, slot.time, slot.available)}
-                                    disabled={!slot.available}
+                                    onClick={() => handleBookAppointment(date, slot.time, slot.available, slot.inPast)}
+                                    disabled={!slot.available || slot.inPast}
                                     className={`p-3 text-sm font-medium rounded-lg transition duration-150 text-center ${
-                                      slot.available
-                                        ? 'text-blue-800 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-                                        : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                                      slot.available && !slot.inPast
+                                        ? 'text-blue-800 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 cursor-pointer'
+                                        : slot.inPast
+                                          ? 'text-gray-400 bg-red-50 border border-red-200 cursor-not-allowed'
+                                          : 'text-gray-400 bg-gray-100 border border-gray-300 cursor-not-allowed'
                                     }`}
+                                    title={slot.inPast ? 'Khung giờ đã qua' : slot.booked ? 'Đã có người đặt' : 'Có thể đặt'}
                                   >
                                     {slot.time}
-                                    {!slot.available && (
-                                      <div className="text-xs text-red-500 mt-1">Đã đặt</div>
+                                    {slot.booked && (
+                                      <div className="text-xs text-gray-500 mt-1">Đã đặt</div>
+                                    )}
+                                    {slot.inPast && (
+                                      <div className="text-xs text-red-500 mt-1">Đã qua</div>
                                     )}
                                   </button>
                                 ))}

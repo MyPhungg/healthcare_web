@@ -3,18 +3,20 @@ import { User, Mail, Phone, MapPin, Award, Briefcase, Edit2, Calendar } from 'lu
 import Button from '../../components/common/button';
 import DoctorService from '../../service/doctorService';
 import AuthService from '../../service/authService';
+import userService from '../../service/userService';
 
 const DoctorProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [doctorInfo, setDoctorInfo] = useState(null);
+  const [userInfo, setUserInfo] = useState(null); // THÊM STATE cho user info
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
     speciality: '',
-    specialityId: '', // THÊM specialityId
+    specialityId: '',
     address: '',
     bio: '',
     clinicName: '',
@@ -23,23 +25,39 @@ const DoctorProfile = () => {
     gender: ''
   });
 
-  // Fetch doctor profile on component mount
+  // Fetch doctor profile and user info
   useEffect(() => {
     const fetchDoctorProfile = async () => {
       try {
         setLoading(true);
         const userId = AuthService.getUserId();
-        const profile = await DoctorService.getDoctorProfile(userId);
         
+        // Fetch user info (email và phone)
+        let userData = null;
+        if (userId) {
+          try {
+            userData = await userService.getUserById(userId);
+            setUserInfo(userData);
+          } catch (error) {
+            console.error('Error fetching user info:', error);
+          }
+        }
+        
+        // Fetch doctor profile
+        const profile = await DoctorService.getDoctorProfile(userId);
         setDoctorInfo(profile);
         
         // Lấy tên chuyên khoa nếu có specialityId
         let specialityName = 'Chưa cập nhật';
         if (profile.specialityId) {
-          specialityName = await DoctorService.getSpecialityName(profile.specialityId);
+          try {
+            specialityName = await DoctorService.getSpecialityName(profile.specialityId);
+          } catch (error) {
+            console.error('Error fetching speciality name:', error);
+          }
         }
 
-        // Format date of birth từ yyyy-MM-dd sang dd/MM/yyyy
+        // Format date of birth
         const formatDateOfBirth = (dateString) => {
           if (!dateString) return '';
           const date = new Date(dateString);
@@ -56,12 +74,16 @@ const DoctorProfile = () => {
           return genderMap[gender] || gender;
         };
 
+        // Get email và phone từ userData nếu có, nếu không thì từ profile
+        const email = userData?.email || AuthService.getCurrentUser()?.email || '';
+        const phone = userData?.phone || profile.phone || '';
+
         setFormData({
           fullName: profile.fullName || '',
-          email: AuthService.getCurrentUser()?.email || '',
-          phone: profile.phone || '',
+          email: email,
+          phone: phone,
           speciality: specialityName,
-          specialityId: profile.specialityId || '', // THÊM specialityId
+          specialityId: profile.specialityId || '',
           address: `${profile.address || ''}, ${profile.district || ''}, ${profile.city || ''}`.replace(/^,\s*/, ''),
           bio: profile.bio || '',
           clinicName: profile.clinicName || '',
@@ -99,34 +121,61 @@ const DoctorProfile = () => {
       const district = addressParts[1] || '';
       const city = addressParts[2] || '';
       
-      // Chuẩn bị data để update - BAO GỒM TẤT CẢ FIELD REQUIRED
-      const updateData = {
+      // Chuẩn bị data để update doctor profile
+      const doctorUpdateData = {
         fullName: formData.fullName,
-        phone: formData.phone,
+        phone: formData.phone, // Sẽ cập nhật qua user service
         bio: formData.bio,
         clinicName: formData.clinicName,
         clinicDescription: formData.clinicDescription,
         address: address,
         district: district,
         city: city,
-        specialityId: doctorInfo.specialityId, // QUAN TRỌNG: thêm specialityId
-        gender: doctorInfo.gender, // QUAN TRỌNG: thêm gender
-        dateOfBirth: doctorInfo.dateOfBirth // QUAN TRỌNG: thêm dateOfBirth
+        specialityId: doctorInfo.specialityId,
+        gender: doctorInfo.gender,
+        dateOfBirth: doctorInfo.dateOfBirth
       };
 
-      console.log('Update data before sending:', updateData);
+      console.log('Update data before sending:', doctorUpdateData);
 
-      await DoctorService.updateDoctorProfile(doctorInfo.doctorId, updateData);
+      // Update doctor profile
+      await DoctorService.updateDoctorProfile(doctorInfo.doctorId, doctorUpdateData);
+      
+      // Update user info (phone)
+      if (userInfo?.userId) {
+        const userUpdateData = {
+          phone: formData.phone
+          // Note: Email thường không được thay đổi, chỉ update phone
+        };
+        
+        await userService.updateUser(userInfo.userId, userUpdateData);
+      }
       
       // Refresh data sau khi update
       const userId = AuthService.getUserId();
+      
+      // Refresh user info
+      if (userId) {
+        try {
+          const updatedUserData = await userService.getUserById(userId);
+          setUserInfo(updatedUserData);
+        } catch (error) {
+          console.error('Error refreshing user info:', error);
+        }
+      }
+      
+      // Refresh doctor profile
       const updatedProfile = await DoctorService.getDoctorProfile(userId);
       setDoctorInfo(updatedProfile);
       
       // Cập nhật lại speciality name
       let specialityName = 'Chưa cập nhật';
       if (updatedProfile.specialityId) {
-        specialityName = await DoctorService.getSpecialityName(updatedProfile.specialityId);
+        try {
+          specialityName = await DoctorService.getSpecialityName(updatedProfile.specialityId);
+        } catch (error) {
+          console.error('Error fetching speciality name:', error);
+        }
       }
 
       // Cập nhật formData với dữ liệu mới
@@ -148,7 +197,7 @@ const DoctorProfile = () => {
       setFormData(prev => ({
         ...prev,
         fullName: updatedProfile.fullName || '',
-        phone: updatedProfile.phone || '',
+        phone: formData.phone, // Giữ lại số điện thoại mới đã nhập
         bio: updatedProfile.bio || '',
         clinicName: updatedProfile.clinicName || '',
         clinicDescription: updatedProfile.clinicDescription || '',
@@ -171,7 +220,7 @@ const DoctorProfile = () => {
   };
 
   const handleCancel = () => {
-    // Reset form data từ doctorInfo gốc
+    // Reset form data từ doctorInfo và userInfo gốc
     if (doctorInfo) {
       const formatDateOfBirth = (dateString) => {
         if (!dateString) return '';
@@ -188,10 +237,13 @@ const DoctorProfile = () => {
         return genderMap[gender] || gender;
       };
 
+      // Get original phone từ userInfo nếu có
+      const originalPhone = userInfo?.phone || doctorInfo.phone || '';
+
       setFormData(prev => ({
         ...prev,
         fullName: doctorInfo.fullName || '',
-        phone: doctorInfo.phone || '',
+        phone: originalPhone,
         bio: doctorInfo.bio || '',
         clinicName: doctorInfo.clinicName || '',
         clinicDescription: doctorInfo.clinicDescription || '',
@@ -271,7 +323,7 @@ const DoctorProfile = () => {
             label="Email" 
             name="email" 
             value={formData.email} 
-            isEditing={false}
+            isEditing={false} // Email không chỉnh sửa được
             onChange={handleChange} 
           />
           <InfoField 

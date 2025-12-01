@@ -3,6 +3,8 @@ import { User, Mail, Phone, MapPin, Calendar, Download, Edit2, FileText, Camera 
 import Button from '../../components/common/button';
 import PatientService from '../../service/patientService';
 import AppointmentService from '../../service/appointmentService';
+import userService from '../../service/userService'; // THÊM IMPORT
+import AuthService from '../../service/authService'; // THÊM IMPORT
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('info');
@@ -10,20 +12,30 @@ const Profile = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userData, setUserData] = useState(null); // THÊM STATE cho user data
 
-  // Lấy thông tin user từ token
-  const getUserInfoFromToken = () => {
+  // Lấy thông tin user bằng userId
+  const fetchUserInfo = async (userId) => {
     try {
+      const userInfo = await userService.getUserById(userId);
+      console.log('User info:', userInfo);
+      setUserData(userInfo);
+      return userInfo;
+    } catch (err) {
+      console.error('Error fetching user info:', err);
+      // Nếu không lấy được từ API, dùng thông tin từ token
       const token = localStorage.getItem('token');
-      if (!token) return null;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return {
-        userId: payload.userId || payload.sub,
-        email: payload.email,
-        phone: payload.phone
-      };
-    } catch (error) {
-      console.error('Error decoding token:', error);
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          return {
+            email: payload.email,
+            phone: payload.phone
+          };
+        } catch (tokenError) {
+          console.error('Error decoding token:', tokenError);
+        }
+      }
       return null;
     }
   };
@@ -31,29 +43,43 @@ const Profile = () => {
   // Lấy thông tin patient bằng userId
   const fetchPatientInfo = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const userFromToken = getUserInfoFromToken();
+      const token = AuthService.getToken();
       
-      if (!token || !userFromToken) {
+      if (!token) {
         throw new Error('No authentication token found');
       }
 
-      const patientData = await PatientService.getPatientByUserId(userFromToken.userId, token);
+      // Lấy userId từ token
+      let userId;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.userId || payload.sub;
+      } catch (tokenError) {
+        console.error('Error decoding token:', tokenError);
+        throw new Error('Invalid authentication token');
+      }
+
+      // Lấy thông tin user từ API
+      const userInfo = await fetchUserInfo(userId);
+      
+      // Lấy thông tin patient
+      const patientData = await PatientService.getPatientByUserId(userId, token);
       console.log('Patient data:', patientData);
       
-      // Format data để hiển thị - lấy email và phone từ token
+      // Format data để hiển thị - sử dụng email và phone từ userInfo
       setUserInfo({
         patientId: patientData.patientId,
         name: patientData.fullName || 'Chưa có tên',
-        phone: userFromToken.phone || 'Chưa có số điện thoại', // Lấy từ token
-        email: userFromToken.email || 'Chưa có email', // Lấy từ token
+        phone: userInfo?.phone || 'Chưa có số điện thoại',
+        email: userInfo?.email || 'Chưa có email',
         dateOfBirth: patientData.dateOfBirth || 'Chưa có ngày sinh',
         gender: patientData.gender === 'MALE' ? 'Nam' : patientData.gender === 'FEMALE' ? 'Nữ' : 'Khác',
         address: patientData.address || 'Chưa có địa chỉ',
         district: patientData.district || 'Chưa có quận/huyện',
         city: patientData.city || 'Chưa có thành phố',
         insuranceNum: patientData.insuranceNum || 'Chưa có số BHYT',
-        avatar: patientData.profileImg || null
+        avatar: patientData.profileImg || null,
+        userId: userId // Thêm userId để dùng cho update
       });
 
       return patientData.patientId;
@@ -68,7 +94,7 @@ const Profile = () => {
   // Lấy lịch hẹn của patient
   const fetchAppointments = async (patientId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getToken();
       
       if (!token) {
         throw new Error('No authentication token found');
@@ -77,8 +103,6 @@ const Profile = () => {
       const appointmentsData = await AppointmentService.getAppointmentsByPatient(patientId, token);
       console.log('Appointments data:', appointmentsData);
       
-      // API trả về array các object có appointment, doctor, fee
-      // Không cần format nhiều, giữ nguyên cấu trúc để sử dụng trong component
       setAppointments(appointmentsData || []);
 
     } catch (err) {
@@ -106,10 +130,10 @@ const Profile = () => {
     fetchData();
   }, []);
 
-  // Cập nhật thông tin patient
+  // Cập nhật thông tin patient và user
   const updatePatientInfo = async (updatedData) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getToken();
       
       if (!token || !userInfo?.patientId) {
         throw new Error('No authentication token found or patient ID missing');
@@ -118,7 +142,7 @@ const Profile = () => {
       // Chuyển đổi gender từ frontend sang backend format
       const backendGender = updatedData.gender === 'Nam' ? 'MALE' : updatedData.gender === 'Nữ' ? 'FEMALE' : 'OTHER';
 
-      // Tạo object data để gửi lên service - KHÔNG gửi email và phone
+      // Tạo object data để gửi lên service
       const patientUpdateData = {
         fullName: updatedData.name || '',
         gender: backendGender,
@@ -131,31 +155,65 @@ const Profile = () => {
         coverImg: null
       };
 
-      console.log('Sending update data:', patientUpdateData);
+      console.log('Sending patient update data:', patientUpdateData);
 
-      const result = await PatientService.updatePatient(userInfo.patientId, patientUpdateData, token);
-      console.log('Update successful:', result);
-      
-      // Cập nhật lại thông tin local
-      if (updatedData.avatar instanceof File) {
-        // Fetch lại thông tin patient để lấy URL ảnh mới từ server
-        const userFromToken = getUserInfoFromToken();
-        const freshPatientData = await PatientService.getPatientByUserId(userFromToken.userId, token);
-        
+      // Update patient info
+      const patientResult = await PatientService.updatePatient(userInfo.patientId, patientUpdateData, token);
+      console.log('Patient update successful:', patientResult);
+
+      // Update user info (phone) nếu có thay đổi
+      if (userInfo.userId && userData?.phone !== updatedData.phone) {
+        try {
+          const userUpdateData = {
+            phone: updatedData.phone
+          };
+          
+          await userService.updateUser(userInfo.userId, userUpdateData);
+          console.log('User phone updated successfully');
+        } catch (userError) {
+          console.error('Error updating user phone:', userError);
+          // Không throw error ở đây để không làm hỏng việc update patient info
+        }
+      }
+
+      // Refresh data sau khi update
+      // Refresh user info
+      if (userInfo.userId) {
+        try {
+          const freshUserData = await fetchUserInfo(userInfo.userId);
+          
+          // Refresh patient info
+          const freshPatientData = await PatientService.getPatientByUserId(userInfo.userId, token);
+          
+          // Cập nhật lại state
+          setUserInfo(prev => ({
+            ...prev,
+            ...updatedData,
+            name: freshPatientData.fullName || updatedData.name,
+            phone: freshUserData?.phone || updatedData.phone,
+            avatar: updatedData.avatar instanceof File ? 
+              (freshPatientData.profileImg || updatedData.avatar) : 
+              (updatedData.avatar || freshPatientData.profileImg)
+          }));
+        } catch (refreshError) {
+          console.error('Error refreshing data:', refreshError);
+          // Nếu refresh thất bại, vẫn update local state
+          setUserInfo(prev => ({
+            ...prev,
+            ...updatedData,
+            avatar: updatedData.avatar instanceof File ? prev.avatar : updatedData.avatar
+          }));
+        }
+      } else {
+        // Nếu không có userId, chỉ update local state
         setUserInfo(prev => ({
           ...prev,
           ...updatedData,
-          avatar: freshPatientData.profileImg // Lấy URL ảnh mới từ server
-        }));
-      } else {
-        // Nếu không có ảnh mới, update bình thường
-        setUserInfo(prev => ({
-          ...prev,
-          ...updatedData
+          avatar: updatedData.avatar instanceof File ? prev.avatar : updatedData.avatar
         }));
       }
       
-      return result;
+      return patientResult;
 
     } catch (err) {
       console.error('Error updating patient info:', err);
@@ -266,7 +324,7 @@ const Profile = () => {
   );
 };
 
-// Personal Info Component
+// Personal Info Component - Chỉ cần sửa nhỏ ở phần hiển thị
 const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(userInfo);
@@ -282,9 +340,16 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
   }, [userInfo]);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Kiểm tra nếu là email thì không cho chỉnh sửa
+    if (name === 'email') {
+      return;
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
@@ -441,9 +506,8 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
           label="Số điện thoại"
           value={formData?.phone || ''}
           name="phone"
-          isEditing={false} // Luôn disable, chỉ hiển thị
+          isEditing={isEditing} // Bây giờ có thể chỉnh sửa
           onChange={handleChange}
-          disabled={true}
         />
         <InfoField
           icon={Mail}
@@ -451,7 +515,7 @@ const PersonalInfo = ({ userInfo, onUpdatePatient }) => {
           value={formData?.email || ''}
           name="email"
           type="email"
-          isEditing={false} // Luôn disable, chỉ hiển thị
+          isEditing={false} // Email không chỉnh sửa được
           onChange={handleChange}
           disabled={true}
         />
@@ -572,7 +636,6 @@ const InfoField = ({
 };
 
 // Appointment History Component (giữ nguyên)
-// Appointment History Component (đã cập nhật)
 const AppointmentHistory = ({ appointments }) => {
   const getStatusBadge = (status) => {
     const config = {
@@ -735,4 +798,5 @@ const AppointmentHistory = ({ appointments }) => {
     </div>
   );
 };
+
 export default Profile;

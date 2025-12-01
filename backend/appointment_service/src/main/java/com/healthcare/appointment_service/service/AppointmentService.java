@@ -4,6 +4,7 @@ import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.common.CodeGeneratorUtils;
 import com.healthcare.appointment_service.dto.AppointmentInfo;
 import com.healthcare.appointment_service.dto.AppointmentResponse;
+import com.healthcare.appointment_service.dto.AppointmentResponseForGetAll;
 import com.healthcare.appointment_service.dto.NotificationEvent;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.entity.Schedule;
@@ -106,8 +107,19 @@ public class AppointmentService {
 
 
 
-    public List<Appointment> getAllAppointment(){
-        return appointmentRepository.findAll();
+    public List<AppointmentResponseForGetAll> getAllAppointment(){
+        List<AppointmentResponseForGetAll> appList = new ArrayList<>();
+        List<Appointment> list =  appointmentRepository.findAll();
+        for(Appointment app : list){
+            AppointmentResponseForGetAll res = new AppointmentResponseForGetAll();
+            res.setAppointment(app);
+            res.setDoctor(getDoctorByScheduleId(app.getScheduleId()));
+            res.setPatient(patientClient.getById(app.getPatientId()).getBody());
+            res.setFee(getFee(app.getScheduleId()));
+            appList.add(res);
+        }
+        return appList;
+
     }
 
     @Transactional
@@ -172,6 +184,8 @@ public class AppointmentService {
         DoctorDTO doctor = doctorClient.getDoctorById(doctorId);
         return doctor;
     }
+
+
 
     public BigDecimal getFee (String scheduleId){
         Schedule schedule = scheduleRepository.findById(scheduleId)

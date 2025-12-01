@@ -3,6 +3,7 @@ package com.healthcare.appointment_service.controller;
 import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.dto.AppointmentInfo;
 import com.healthcare.appointment_service.dto.AppointmentResponse;
+import com.healthcare.appointment_service.dto.AppointmentResponseForGetAll;
 import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
@@ -104,7 +105,7 @@ public class AppointmentController {
     @GetMapping
     public ResponseEntity<?> getAllAppointment(){
         try {
-            List<Appointment> list = appointmentService.getAllAppointment();
+            List<AppointmentResponseForGetAll> list = appointmentService.getAllAppointment();
             return ResponseEntity.ok(list);
         } catch (Exception e) {
             e.printStackTrace();

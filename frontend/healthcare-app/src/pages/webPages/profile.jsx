@@ -77,18 +77,9 @@ const Profile = () => {
       const appointmentsData = await AppointmentService.getAppointmentsByPatient(patientId, token);
       console.log('Appointments data:', appointmentsData);
       
-      const formattedAppointments = appointmentsData.map(appointment => ({
-        id: appointment.appointmentId,
-        doctorId: appointment.doctorId || 'Đang cập nhật',
-        time: `${appointment.appointmentStart?.substring(0, 5) || ''} - ${appointment.appointmentEnd?.substring(0, 5) || ''}`,
-        fee: appointment.fee ? `${appointment.fee.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ',
-        bookingDate: new Date(appointment.interactedAt).toLocaleDateString('vi-VN'),
-        appointmentDate: appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString('vi-VN') : 'Chưa có',
-        status: appointment.status?.toLowerCase() || 'pending',
-        reason: appointment.reason || 'Không có lý do'
-      }));
-
-      setAppointments(formattedAppointments);
+      // API trả về array các object có appointment, doctor, fee
+      // Không cần format nhiều, giữ nguyên cấu trúc để sử dụng trong component
+      setAppointments(appointmentsData || []);
 
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -581,16 +572,38 @@ const InfoField = ({
 };
 
 // Appointment History Component (giữ nguyên)
+// Appointment History Component (đã cập nhật)
 const AppointmentHistory = ({ appointments }) => {
   const getStatusBadge = (status) => {
     const config = {
-      pending: { label: 'Chờ xác nhận', bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
-      confirmed: { label: 'Đã xác nhận', bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
-      cancelled: { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
-      completed: { label: 'Đã hoàn thành', bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' }
+      pending: { 
+        label: 'Chờ xác nhận', 
+        bg: 'bg-yellow-100', 
+        text: 'text-yellow-800', 
+        border: 'border-yellow-300' 
+      },
+      confirmed: { 
+        label: 'Đã xác nhận', 
+        bg: 'bg-green-100', 
+        text: 'text-green-800', 
+        border: 'border-green-300' 
+      },
+      cancelled: { 
+        label: 'Đã hủy', 
+        bg: 'bg-red-100', 
+        text: 'text-red-800', 
+        border: 'border-red-300' 
+      },
+      completed: { 
+        label: 'Đã hoàn thành', 
+        bg: 'bg-blue-100', 
+        text: 'text-blue-800', 
+        border: 'border-blue-300' 
+      }
     };
 
-    const { label, bg, text, border } = config[status] || config.pending;
+    const statusLower = status?.toLowerCase();
+    const { label, bg, text, border } = config[statusLower] || config.pending;
 
     return (
       <span className={`px-3 py-1.5 rounded border-2 font-medium text-sm ${bg} ${text} ${border}`}>
@@ -599,58 +612,127 @@ const AppointmentHistory = ({ appointments }) => {
     );
   };
 
+  // Format thời gian từ 12:30:00 -> 12:30
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    return timeString.substring(0, 5);
+  };
+
+  // Format ngày từ 2025-12-03 -> 03/12/2025
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Chưa có';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+  };
+
+  // Format datetime từ 2025-12-01T07:12:11 -> 01/12/2025 07:12
+  const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return 'Chưa có';
+    const date = new Date(dateTimeString);
+    return `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })}`;
+  };
+
+  // Format tiền VNĐ
+  const formatCurrency = (amount) => {
+    if (!amount) return '0 VNĐ';
+    return `${amount.toLocaleString('vi-VN')} VNĐ`;
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b">
         Lịch sử đặt lịch
       </h2>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-blue-600 text-white">
-              <th className="px-4 py-3 text-left font-semibold">ID lịch hẹn</th>
-              <th className="px-4 py-3 text-left font-semibold">Tên bác sĩ</th>
-              <th className="px-4 py-3 text-left font-semibold">Giờ khám</th>
-              <th className="px-4 py-3 text-left font-semibold">Giá khám</th>
-              <th className="px-4 py-3 text-left font-semibold">Ngày khám</th>
-              <th className="px-4 py-3 text-left font-semibold">Lý do khám</th>
-              <th className="px-4 py-3 text-left font-semibold">Ngày đặt</th>
-              <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            {appointments.map((appointment, index) => (
-              <tr 
-                key={appointment.id}
-                className={`border-b hover:bg-blue-50 transition-colors ${
-                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                }`}
-              >
-                <td className="px-4 py-4 font-medium text-gray-800">{appointment.id}</td>
-                <td className="px-4 py-4 text-gray-700">{appointment.doctorId}</td>
-                <td className="px-4 py-4 text-gray-700">{appointment.time}</td>
-                <td className="px-4 py-4 text-blue-600 font-semibold">{appointment.fee}</td>
-                <td className="px-4 py-4 text-gray-700">{appointment.appointmentDate}</td>
-                <td className="px-4 py-4 text-gray-700">{appointment.reason}</td>
-                <td className="px-4 py-4 text-gray-700">{appointment.bookingDate}</td>
-                <td className="px-4 py-4">
-                  {getStatusBadge(appointment.status)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-6">
+        {appointments.map((appointment, index) => (
+          <div 
+            key={appointment.appointment?.appointmentId || index}
+            className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-6"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Lịch hẹn: {appointment.appointment?.appointmentId || 'N/A'}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Mã lịch: {appointment.appointment?.scheduleId || 'N/A'}
+                </p>
+              </div>
+              <div className="text-right">
+                {getStatusBadge(appointment.appointment?.status)}
+                <p className="text-sm text-gray-500 mt-2">
+                  Ngày đặt: {formatDateTime(appointment.appointment?.interactedAt)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-600">Thông tin khám</p>
+                <div className="space-y-1">
+                  <p className="text-gray-800">
+                    <span className="font-medium">Ngày khám:</span> {formatDate(appointment.appointment?.appointmentDate)}
+                  </p>
+                  <p className="text-gray-800">
+                    <span className="font-medium">Giờ khám:</span> {formatTime(appointment.appointment?.appointmentStart)} - {formatTime(appointment.appointment?.appointmentEnd)}
+                  </p>
+                  <p className="text-gray-800">
+                    <span className="font-medium">Lý do:</span> {appointment.appointment?.reason || 'Không có lý do'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-600">Thông tin bác sĩ</p>
+                <div className="space-y-1">
+                  <p className="text-gray-800 font-medium">{appointment.doctor?.fullName || 'Đang cập nhật'}</p>
+                  <p className="text-gray-600 text-sm">{appointment.doctor?.specialityId || 'Chưa có chuyên khoa'}</p>
+                  <p className="text-gray-600 text-sm">{appointment.doctor?.clinicName || 'Chưa có phòng khám'}</p>
+                  <p className="text-gray-600 text-sm">
+                    {appointment.doctor?.city && `${appointment.doctor?.city}`}
+                    {appointment.doctor?.district && `, ${appointment.doctor?.district}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-600">Chi phí & Thông tin khác</p>
+                <div className="space-y-1">
+                  <p className="text-blue-600 font-semibold text-lg">
+                    {formatCurrency(appointment.fee)}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    <span className="font-medium">Mã bác sĩ:</span> {appointment.doctor?.doctorId || 'N/A'}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    <span className="font-medium">Mã bệnh nhân:</span> {appointment.appointment?.patientId || 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {appointment.doctor?.bio && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-sm font-medium text-gray-600 mb-2">Thông tin thêm về bác sĩ:</p>
+                <p className="text-gray-700 text-sm">{appointment.doctor.bio}</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {appointments.length === 0 && (
         <div className="text-center py-12">
           <Calendar size={64} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 text-lg">Chưa có lịch hẹn nào</p>
+          <p className="text-gray-400 mt-2">Hãy đặt lịch hẹn đầu tiên của bạn</p>
         </div>
       )}
     </div>
   );
 };
-
 export default Profile;

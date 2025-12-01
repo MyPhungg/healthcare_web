@@ -20,6 +20,7 @@ public class PatientResponse {
     private String insuranceNum;
     private String profileImg;
     private String coverImg;
+    private UserResponse user;
 
 //    private UserInfo user;
 //

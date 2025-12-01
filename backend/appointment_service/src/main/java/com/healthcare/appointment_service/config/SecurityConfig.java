@@ -30,11 +30,16 @@ public class SecurityConfig {
 
                 // Vô hiệu hóa bảo mật (Authorization) cho mọi request
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/actuator/**").permitAll()
+                                .requestMatchers("/actuator/**").permitAll()
+//                                .requestMatchers("/api/auth/**").permitAll()
+//                                .requestMatchers("/api/payment/**").permitAll()
+//                                .requestMatchers("/appointments/**").permitAll()
+                                .anyRequest().authenticated()
+
 //                        .requestMatchers("/appointments/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
 //                        .requestMatchers("/schedules/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
 //                        .requestMatchers("/dayoffs/**").hasAnyAuthority("PATIENT", "DOCTOR", "ADMIN")
-                        .anyRequest().authenticated()
+
                 )
                 // Vô hiệu hóa CSRF (rất quan trọng khi tắt bảo mật)
                 .csrf(csrf -> csrf.disable())

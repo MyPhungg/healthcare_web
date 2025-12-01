@@ -50,6 +50,7 @@ public class Appointment {
     @Column(name = "reason")
     private String reason;
 
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", insertable = false, updatable = false)
     @JsonBackReference

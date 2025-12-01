@@ -23,7 +23,7 @@ public class PatientReportController {
 
     @GetMapping("/patients")
     public ResponseEntity<byte[]> getPatientReport() throws JRException {
-        List<Patient> patients = patientService.getAllPatients();
+        List<Patient> patients = patientService.getAllPatientsForReport();
         byte[] pdf = reportService.generatePatientReport(patients);
 
         return ResponseEntity.ok()

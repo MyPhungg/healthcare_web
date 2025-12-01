@@ -3,6 +3,7 @@ package com.healthcare.appointment_service.service;
 import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.common.CodeGeneratorUtils;
 import com.healthcare.appointment_service.dto.AppointmentInfo;
+import com.healthcare.appointment_service.dto.AppointmentResponse;
 import com.healthcare.appointment_service.dto.NotificationEvent;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.entity.Schedule;
@@ -22,8 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.sql.Time;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 @Slf4j
 @Service
@@ -135,15 +138,46 @@ public class AppointmentService {
     }
 
     // Lấy list lịch hẹn của 1 bác sĩ (1 bác sĩ có 1 scheduleId)
-    public List<Appointment> getAllAppointmentWithScheduleId(String scheduleId){
-        return appointmentRepository.findByScheduleId(scheduleId);
+    public List<AppointmentResponse> getAllAppointmentWithScheduleId(String scheduleId){
+        List<AppointmentResponse> appList = new ArrayList<>();
+        List<Appointment> list =  appointmentRepository.findByScheduleId(scheduleId);
+        for(Appointment app : list){
+            AppointmentResponse res = new AppointmentResponse();
+            res.setAppointment(app);
+            res.setDoctor(getDoctorByScheduleId(app.getScheduleId()));
+            res.setFee(getFee(app.getScheduleId()));
+            appList.add(res);
+        }
+        return appList;
     }
 
     // Lấy list lịch hẹn của bệnh nhân
-    public List<Appointment> getAllAppointmentWithPatientId(String patientId){
-        return appointmentRepository.findByPatientId(patientId);
+    public List<AppointmentResponse> getAllAppointmentWithPatientId(String patientId){
+        List<AppointmentResponse> appList = new ArrayList<>();
+        List<Appointment> list =  appointmentRepository.findByPatientId(patientId);
+        for(Appointment app : list){
+            AppointmentResponse res = new AppointmentResponse();
+            res.setAppointment(app);
+            res.setDoctor(getDoctorByScheduleId(app.getScheduleId()));
+            res.setFee(getFee(app.getScheduleId()));
+            appList.add(res);
+        }
+        return appList;
     }
 
+    public DoctorDTO getDoctorByScheduleId(String scheduleId){
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch làm việc"));
+        String doctorId = schedule.getDoctorId();
+        DoctorDTO doctor = doctorClient.getDoctorById(doctorId);
+        return doctor;
+    }
+
+    public BigDecimal getFee (String scheduleId){
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch làm việc"));
+        return schedule.getConsultationFee();
+    }
     public AppointmentInfo getAppointmentInfo(String appointmentId) {
         log.info("🔍 Getting appointment info for {}", appointmentId);
 

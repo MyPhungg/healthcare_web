@@ -25,4 +25,5 @@ public class DoctorDTO {
     private String bio;
     private String profileImg;
     private String coverImg;
+    private UserResponse user;
 }

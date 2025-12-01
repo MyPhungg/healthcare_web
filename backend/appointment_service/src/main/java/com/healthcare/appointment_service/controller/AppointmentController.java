@@ -2,6 +2,7 @@ package com.healthcare.appointment_service.controller;
 
 import com.healthcare.appointment_service.common.AppointmentStatus;
 import com.healthcare.appointment_service.dto.AppointmentInfo;
+import com.healthcare.appointment_service.dto.AppointmentResponse;
 import com.healthcare.appointment_service.dto.CreateAppointmentRequest;
 import com.healthcare.appointment_service.entity.Appointment;
 import com.healthcare.appointment_service.feign.dto.ScheduleBySpeciality;
@@ -59,7 +60,7 @@ public class AppointmentController {
     @GetMapping("/by-doctor")
     public ResponseEntity<?> getAllAppointmentWithScheduleId(@RequestParam String scheduleId){
         try{
-            List<Appointment> list = appointmentService.getAllAppointmentWithScheduleId(scheduleId);
+            List<AppointmentResponse> list = appointmentService.getAllAppointmentWithScheduleId(scheduleId);
             return ResponseEntity.ok(list);
         }
         catch (RuntimeException e){
@@ -70,7 +71,7 @@ public class AppointmentController {
     @GetMapping("/by-patient")
     public ResponseEntity<?> getAllAppointmentWithPatientId(@RequestParam String patientId){
         try{
-            List<Appointment> list = appointmentService.getAllAppointmentWithPatientId(patientId);
+            List<AppointmentResponse> list = appointmentService.getAllAppointmentWithPatientId(patientId);
             return ResponseEntity.ok(list);
         }
         catch (RuntimeException e){

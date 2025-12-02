@@ -275,7 +275,7 @@ const AppointmentManagement = () => {
 
     const { appointment: apt, doctor, patient, fee } = appointment;
     const timeDisplay = `${AppointmentService.formatTime(apt.appointmentStart)} - ${AppointmentService.formatTime(apt.appointmentEnd)}`;
-
+    
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -344,7 +344,7 @@ const AppointmentManagement = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Chuyên khoa:</span>
-                      <span className="font-semibold">{doctor.specialityName || 'N/A'}</span>
+                      <span className="font-semibold">{doctor.specialityId || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Phòng khám:</span>
